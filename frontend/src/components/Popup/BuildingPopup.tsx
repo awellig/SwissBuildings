@@ -16,19 +16,22 @@ import {
   Badge,
   Icon,
   Divider,
+  Box,
 } from '@chakra-ui/react';
 import { 
   IconBuilding, 
   IconLeaf, 
   IconHome, 
   IconBolt, 
-  IconSun 
+  IconSun,
+  IconGripVertical,
 } from '@tabler/icons-react';
 import { GeneralInfoTab } from '../Tabs/GeneralInfoTab';
 import { EnvironmentTab } from '../Tabs/EnvironmentTab';
 import { IndoorTab } from '../Tabs/IndoorTab';
 import { EnergyTab } from '../Tabs/EnergyTab';
 import { SolarTab } from '../Tabs/SolarTab';
+import { useState, useEffect } from 'react';
 
 interface BuildingFeature {
   type: 'Feature';
@@ -54,9 +57,49 @@ interface BuildingPopupProps {
 }
 
 export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps) => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
   if (!building) return null;
 
   const { properties } = building;
+
+  // Handle modal dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    setPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, dragStart]);
 
   const getBuildingTypeBadgeColor = (type: string) => {
     switch (type.toLowerCase()) {
@@ -76,24 +119,39 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside">
       <ModalOverlay />
-      <ModalContent maxH="90vh">
+      <ModalContent 
+        maxH="90vh"
+        transform={`translate(${position.x}px, ${position.y}px)`}
+        cursor={isDragging ? 'grabbing' : 'default'}
+      >
         <ModalHeader pb={3}>
-          <VStack align="start" spacing={2}>
-            <HStack>
-              <Icon as={IconBuilding} color="brand.500" boxSize={6} />
-              <Text fontSize="xl" fontWeight="bold" color="brand.600">
-                {properties.name}
+          <HStack justify="space-between" align="start">
+            <VStack align="start" spacing={2} flex={1}>
+              <HStack>
+                <Icon as={IconBuilding} color="brand.500" boxSize={6} />
+                <Text fontSize="xl" fontWeight="bold" color="brand.600">
+                  {properties.name}
+                </Text>
+                <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
+                  {properties.buildingType}
+                </Badge>
+              </HStack>
+              <Text fontSize="sm" color="gray.600">
+                {properties.address} • EGID: {properties.EGID}
               </Text>
-              <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
-                {properties.buildingType}
-              </Badge>
-            </HStack>
-            <Text fontSize="sm" color="gray.600">
-              {properties.address} • EGID: {properties.EGID}
-            </Text>
-          </VStack>
+            </VStack>
+            <Box
+              cursor="grab"
+              _active={{ cursor: 'grabbing' }}
+              onMouseDown={handleMouseDown}
+              p={2}
+              ml={4}
+            >
+              <Icon as={IconGripVertical} color="gray.400" boxSize={5} />
+            </Box>
+          </HStack>
         </ModalHeader>
-        <ModalCloseButton />
+        <ModalCloseButton top={4} right={4} />
         
         <ModalBody px={0}>
           <Tabs variant="enclosed" colorScheme="brand">

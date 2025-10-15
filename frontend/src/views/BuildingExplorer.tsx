@@ -45,7 +45,6 @@ const BuildingExplorer = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [use3D, setUse3D] = useState(true); // Default to 3D view
   const [isMounted, setIsMounted] = useState(true);
   const toast = useToast();
 
@@ -196,8 +195,6 @@ const BuildingExplorer = () => {
       >
         <OpenLayersSwissMap
           onBuildingClick={handleBuildingClick}
-          is3D={use3D}
-          onToggle3D={setUse3D}
         />
       </Box>
 

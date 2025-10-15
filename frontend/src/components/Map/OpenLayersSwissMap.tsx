@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   Box, 
-  Button, 
   HStack, 
   VStack,
   Icon, 
@@ -15,44 +14,35 @@ import {
   IconButton,
   Collapse,
   useDisclosure,
-  FormControl,
-  FormLabel,
-  Slider,
-  SliderTrack,
-  SliderFilledTrack,
-  SliderThumb,
 } from '@chakra-ui/react';
 import { 
-  IconMap, 
-  IconMap2, 
   IconLayersLinked, 
   IconChevronLeft,
   IconChevronRight,
-  IconEye,
-  IconEyeOff,
-  IconSettings 
+  IconGripVertical,
 } from '@tabler/icons-react';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
 import XYZ from 'ol/source/XYZ';
 import { fromLonLat } from 'ol/proj';
+import { GeoJSON } from 'ol/format';
+import { Style, Fill, Stroke } from 'ol/style';
 
 interface OpenLayersSwissMapProps {
   onBuildingClick: (building: any) => void;
-  is3D: boolean;
-  onToggle3D: (is3D: boolean) => void;
 }
 
 export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({ 
-  onBuildingClick, 
-  is3D, 
-  onToggle3D 
+  onBuildingClick
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<Map | null>(null);
   const layersRef = useRef<globalThis.Map<string, TileLayer<XYZ>>>(new globalThis.Map());
+  const vectorLayersRef = useRef<globalThis.Map<string, VectorLayer<VectorSource>>>(new globalThis.Map());
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState('color');
   const [overlayLayers, setOverlayLayers] = useState({
@@ -61,8 +51,47 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
     transport: false,
     boundaries: false
   });
+  const [panelPosition, setPanelPosition] = useState({ x: 80, y: 20 }); // Moved right to avoid zoom controls
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const { isOpen: isPanelOpen, onToggle: onTogglePanel } = useDisclosure({ defaultIsOpen: false });
   const toast = useToast();
+
+  // Handle panel dragging
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - panelPosition.x,
+      y: e.clientY - panelPosition.y,
+    });
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    setPanelPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Add global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging, dragStart]);
 
   // Available background layers
   const backgroundLayers = {
@@ -88,7 +117,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
   const overlayLayerConfigs = {
     buildings: {
       name: 'Buildings & Constructions',
-      url: 'https://wmts.geo.admin.ch/1.0.0/ch.bfs.gebaeude_wohnungs_register/default/current/3857/{z}/{x}/{y}.png'
+      url: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.vec25-gebaeude/default/current/3857/{z}/{x}/{y}.png'
     },
     names: {
       name: 'Geographic Names',
@@ -118,12 +147,14 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
 
       // Create buildings layer (initially visible)
       const buildingsLayer = new TileLayer({
-        opacity: 0.7,
+        opacity: 1.0, // Full opacity for building footprints
         source: new XYZ({
           url: overlayLayerConfigs.buildings.url,
           maxZoom: 18,
+          minZoom: 10, // Buildings only visible at zoom 10 and higher
         }),
         visible: overlayLayers.buildings,
+        minZoom: 10, // Enforce minimum zoom for building visibility
       });
 
       // Create map instance centered on Switzerland
@@ -148,6 +179,10 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
           const coordinate = event.coordinate;
           const [x, y] = coordinate;
           
+          // Get current zoom level for debugging
+          const currentZoom = map.getView().getZoom();
+          console.log('Map clicked at coordinate:', coordinate, 'Zoom level:', currentZoom);
+          
           // Get map view properties for API call
           const view = map.getView();
           const mapSize = map.getSize();
@@ -155,14 +190,14 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
           
           const extent = view.calculateExtent(mapSize);
           
-          // Call GeoAdmin identify API using Web Mercator coordinates
+          // Call Swiss GeoAdmin identify API using Web Mercator coordinates
           const identifyUrl = `https://api3.geo.admin.ch/rest/services/api/MapServer/identify?` +
             `geometry=${x},${y}&` +
             `geometryType=esriGeometryPoint&` +
             `layers=all:ch.bfs.gebaeude_wohnungs_register&` +
             `mapExtent=${extent.join(',')}&` +
             `imageDisplay=${mapSize[0]},${mapSize[1]},96&` +
-            `tolerance=5&` +
+            `tolerance=25&` +
             `returnGeometry=true&` +
             `geometryFormat=geojson&` +
             `sr=3857&` +
@@ -171,6 +206,18 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
           console.log('Calling identify API:', identifyUrl);
           
           const response = await fetch(identifyUrl);
+          
+          if (!response.ok) {
+            console.error('API response not OK:', response.status, response.statusText);
+            toast({
+              title: 'Error',
+              description: `API request failed: ${response.status}`,
+              status: 'error',
+              duration: 3000,
+            });
+            return;
+          }
+          
           const data = await response.json();
           
           console.log('Identify API response:', data);
@@ -178,81 +225,113 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
           if (data.results && data.results.length > 0) {
             const feature = data.results[0];
             
-            // Check multiple possible EGID attribute names
-            const egid = feature.attributes?.egid || 
-                        feature.attributes?.EGID || 
-                        feature.attributes?.featureId ||
-                        feature.featureId;
-            
-            console.log('Feature attributes:', feature.attributes);
-            console.log('Looking for EGID, found:', egid);
-            
-            if (egid) {
-              console.log('Building found - EGID:', egid);
-              
-              // Create building object compatible with existing interface
-              const buildingData = {
-                type: 'Feature',
-                properties: {
-                  EGID: egid,
-                  name: `Building ${egid}`,
-                  address: feature.attributes?.str_nr_obj || feature.attributes?.address || 'Address loading...',
-                  buildingType: feature.attributes?.gkode || feature.attributes?.buildingType || 'Unknown',
-                  constructionYear: feature.attributes?.gbauj || feature.attributes?.year || new Date().getFullYear(),
-                  floors: feature.attributes?.gastw || feature.attributes?.floors || 1,
-                  area: feature.attributes?.garea || feature.attributes?.area || 100,
-                  municipality: feature.attributes?.ggdenr || feature.attributes?.municipality || '',
-                  zipCode: feature.attributes?.gplz || feature.attributes?.zipCode || ''
-                },
-                geometry: feature.geometry || {
-                  type: 'Point',
-                  coordinates: [x, y]
+            // Highlight the building polygon if geometry is available
+            if (feature.geometry) {
+              try {
+                const geoJsonFormat = new GeoJSON();
+                const olFeature = geoJsonFormat.readFeature(feature.geometry, {
+                  dataProjection: 'EPSG:3857',
+                  featureProjection: 'EPSG:3857'
+                });
+                
+                // Create highlight layer if it doesn't exist
+                let highlightLayer = vectorLayersRef.current.get('highlight');
+                if (!highlightLayer) {
+                  const highlightSource = new VectorSource();
+                  highlightLayer = new VectorLayer({
+                    source: highlightSource,
+                    style: new Style({
+                      fill: new Fill({
+                        color: 'rgba(255, 0, 0, 0.3)' // Red with transparency
+                      }),
+                      stroke: new Stroke({
+                        color: '#ff0000',
+                        width: 2
+                      })
+                    }),
+                    zIndex: 1000
+                  });
+                  map.addLayer(highlightLayer);
+                  vectorLayersRef.current.set('highlight', highlightLayer);
                 }
-              };
-
-              onBuildingClick(buildingData);
-              
-              toast({
-                title: 'Building Selected',
-                description: `EGID: ${egid} - ${buildingData.properties.address}`,
-                status: 'success',
-                duration: 3000,
-                isClosable: true,
-              });
-            } else {
-              console.log('No EGID found in feature:', feature);
-              console.log('Available attributes:', Object.keys(feature.attributes || {}));
-              
-              // Still show the feature was found, just without EGID
-              const featureId = feature.featureId || 'Unknown';
-              const buildingData = {
-                type: 'Feature',
-                properties: {
-                  EGID: featureId,
-                  name: `Building (${featureId})`,
-                  address: feature.attributes?.str_nr_obj || 'Address not available',
-                  buildingType: feature.layerName || 'Building',
-                  constructionYear: new Date().getFullYear(),
-                  floors: 1,
-                  area: 100,
-                  municipality: '',
-                  zipCode: ''
-                },
-                geometry: feature.geometry || {
-                  type: 'Point',
-                  coordinates: [x, y]
+                
+                // Clear previous highlights and add new one
+                const highlightSource = highlightLayer.getSource();
+                if (highlightSource) {
+                  highlightSource.clear();
+                  
+                  // Handle both single feature and feature array
+                  if (Array.isArray(olFeature)) {
+                    olFeature.forEach(f => highlightSource.addFeature(f));
+                    if (olFeature.length > 0) {
+                      const geometry = olFeature[0].getGeometry();
+                      if (geometry) {
+                        const extent = geometry.getExtent();
+                        map.getView().fit(extent, {
+                          padding: [50, 50, 50, 50],
+                          maxZoom: 18,
+                          duration: 500
+                        });
+                      }
+                    }
+                  } else {
+                    highlightSource.addFeature(olFeature);
+                    const geometry = olFeature.getGeometry();
+                    if (geometry) {
+                      const extent = geometry.getExtent();
+                      map.getView().fit(extent, {
+                        padding: [50, 50, 50, 50],
+                        maxZoom: 18,
+                        duration: 500
+                      });
+                    }
+                  }
                 }
-              };
-
-              onBuildingClick(buildingData);
-              
-              toast({
-                title: 'Building Selected',
-                description: `Feature ID: ${featureId} (No EGID available)`,
-                status: 'info',
-                duration: 3000,
-              });
+              } catch (geoError) {
+                console.warn('Failed to highlight building geometry:', geoError);
+              }
             }
+            
+            // Extract building data from Swiss Federal Building Registry
+            const attrs = feature.attributes || {};
+            const egid = attrs.egid || attrs.EGID || feature.featureId || 'Unknown';
+            
+            console.log('Building found - EGID:', egid);
+            console.log('Building attributes:', attrs);
+            
+            // Create enhanced building object with Swiss building registry data
+            const buildingData = {
+              type: 'Feature',
+              properties: {
+                EGID: egid,
+                name: attrs.strname_deinr ? `${attrs.strname_deinr} ${attrs.deinr || ''}`.trim() : `Building ${egid}`,
+                address: [attrs.strname_deinr, attrs.deinr, attrs.plz4, attrs.plzname].filter(Boolean).join(' ') || 'Address not available',
+                buildingType: attrs.gklas || attrs.gkode || 'Residential Building',
+                constructionYear: attrs.gbauj || new Date().getFullYear(),
+                floors: attrs.gastw || 1,
+                area: attrs.garea || 100,
+                municipality: attrs.ggdenr || attrs.plzname || '',
+                zipCode: attrs.plz4 || '',
+                // Additional Swiss building register fields
+                coordinates: attrs.gkoor_e && attrs.gkoor_n ? [attrs.gkoor_e, attrs.gkoor_n] : [x, y],
+                status: attrs.gstat || 'Active',
+                category: attrs.gkat || 'Building'
+              },
+              geometry: feature.geometry || {
+                type: 'Point',
+                coordinates: [x, y]
+              }
+            };
+
+            onBuildingClick(buildingData);
+            
+            toast({
+              title: 'Swiss Building Selected',
+              description: `EGID: ${egid} - ${buildingData.properties.name}`,
+              status: 'success',
+              duration: 3000,
+              isClosable: true,
+            });
           } else {
             toast({
               title: 'No Building Found',
@@ -359,26 +438,13 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
     }
   }, [overlayLayers, overlayLayerConfigs]);
 
-  // Handle 3D toggle (for now just show info, later can integrate Cesium)
-  const handle3DToggle = (enabled: boolean) => {
-    if (enabled) {
-      toast({
-        title: '3D View',
-        description: '3D building visualization will be available in a future update. Currently showing enhanced 2D view.',
-        status: 'info',
-        duration: 4000,
-      });
-    }
-    onToggle3D(enabled);
-  };
-
   return (
     <Box h="100%" w="100%" position="relative">
       {/* Layer Control Panel */}
       <Box
         position="absolute"
-        top={4}
-        left={4}
+        top={`${panelPosition.y}px`}
+        left={`${panelPosition.x}px`}
         zIndex={1000}
         bg="white"
         borderRadius="lg"
@@ -386,6 +452,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
         border="1px solid"
         borderColor="gray.200"
         minW="280px"
+        cursor={isDragging ? 'grabbing' : 'default'}
       >
         <Collapse in={isPanelOpen} animateOpacity>
           <VStack p={4} spacing={4} align="stretch">
@@ -431,9 +498,18 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
           </VStack>
         </Collapse>
 
-        {/* Panel Toggle Button */}
-        <HStack justify="space-between" p={3} borderTop={isPanelOpen ? "1px solid" : "none"} borderColor="gray.200">
+        {/* Panel Toggle Button with Drag Handle */}
+        <HStack 
+          justify="space-between" 
+          p={3} 
+          borderTop={isPanelOpen ? "1px solid" : "none"} 
+          borderColor="gray.200"
+          onMouseDown={handleMouseDown}
+          cursor="grab"
+          _active={{ cursor: 'grabbing' }}
+        >
           <HStack spacing={2}>
+            <Icon as={IconGripVertical} boxSize={4} color="gray.400" />
             <Icon as={IconLayersLinked} boxSize={4} color="brand.500" />
             <Text fontWeight="semibold" fontSize="sm" color="brand.600">
               Map Layers
@@ -445,43 +521,8 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
             size="sm"
             variant="ghost"
             onClick={onTogglePanel}
+            onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking toggle
           />
-        </HStack>
-      </Box>
-
-      {/* 2D/3D Toggle */}
-      <Box
-        position="absolute"
-        top={4}
-        right={4}
-        zIndex={1000}
-        bg="white"
-        borderRadius="md"
-        shadow="lg"
-        border="1px solid"
-        borderColor="gray.200"
-      >
-        <HStack spacing={0}>
-          <Button
-            size="sm"
-            variant={!is3D ? "solid" : "ghost"}
-            colorScheme={!is3D ? "brand" : "gray"}
-            borderRadius="md 0 0 md"
-            onClick={() => handle3DToggle(false)}
-            leftIcon={<Icon as={IconMap2} />}
-          >
-            2D
-          </Button>
-          <Button
-            size="sm"
-            variant={is3D ? "solid" : "ghost"}
-            colorScheme={is3D ? "brand" : "gray"}
-            borderRadius="0 md md 0"
-            onClick={() => handle3DToggle(true)}
-            leftIcon={<Icon as={IconMap} />}
-          >
-            3D
-          </Button>
         </HStack>
       </Box>
 
