@@ -164,7 +164,15 @@ const BuildingExplorer = () => {
                 Swiss Buildings Explorer
               </Text>
               <Text fontSize="sm" color="gray.600">
-                Powered by swissBUILDINGS3D 3.0 beta
+                Powered by{' '}
+                <a 
+                  href="https://www.bfs.admin.ch/bfs/en/home/services/ogd/portal.html" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#3182ce', textDecoration: 'underline' }}
+                >
+                  opendata.swiss
+                </a>
               </Text>
             </VStack>
           </HStack>
@@ -225,7 +233,7 @@ const BuildingExplorer = () => {
           </Text>
           <HStack spacing={4}>
             <Text>Data Sources:</Text>
-            <Text>swissBUILDINGS3D</Text>
+            <Text>opendata.swiss</Text>
             <Text>NABEL</Text>
             <Text>MeteoSwiss</Text>
             <Text>SFOE Sonnendach</Text>

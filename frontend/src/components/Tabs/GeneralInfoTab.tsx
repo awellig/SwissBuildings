@@ -128,7 +128,16 @@ export const GeneralInfoTab = ({ building }: GeneralInfoTabProps) => {
               </Box>
               <Box>
                 <Text fontWeight="medium" color="gray.700">Data Source</Text>
-                <Text color="gray.600">swissBUILDINGS3D 3.0 beta</Text>
+                <Text color="gray.600">
+                  <a 
+                    href="https://www.bfs.admin.ch/bfs/en/home/services/ogd/portal.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: '#3182ce', textDecoration: 'underline' }}
+                  >
+                    opendata.swiss
+                  </a>
+                </Text>
               </Box>
             </SimpleGrid>
           </VStack>

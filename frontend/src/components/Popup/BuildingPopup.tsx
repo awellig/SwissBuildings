@@ -61,10 +61,6 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  if (!building) return null;
-
-  const { properties } = building;
-
   // Handle modal dragging
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -101,6 +97,11 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
     }
   }, [isDragging, dragStart]);
 
+  // Early return after all hooks have been called
+  if (!building) return null;
+
+  const { properties } = building;
+
   const getBuildingTypeBadgeColor = (type: string) => {
     switch (type.toLowerCase()) {
       case 'office':
@@ -125,7 +126,16 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
         cursor={isDragging ? 'grabbing' : 'default'}
       >
         <ModalHeader pb={3}>
-          <HStack justify="space-between" align="start">
+          <HStack spacing={3} align="start">
+            <Box
+              cursor="grab"
+              _active={{ cursor: 'grabbing' }}
+              onMouseDown={handleMouseDown}
+              p={2}
+              mr={2}
+            >
+              <Icon as={IconGripVertical} color="gray.400" boxSize={5} />
+            </Box>
             <VStack align="start" spacing={2} flex={1}>
               <HStack>
                 <Icon as={IconBuilding} color="brand.500" boxSize={6} />
@@ -140,15 +150,6 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
                 {properties.address} • EGID: {properties.EGID}
               </Text>
             </VStack>
-            <Box
-              cursor="grab"
-              _active={{ cursor: 'grabbing' }}
-              onMouseDown={handleMouseDown}
-              p={2}
-              ml={4}
-            >
-              <Icon as={IconGripVertical} color="gray.400" boxSize={5} />
-            </Box>
           </HStack>
         </ModalHeader>
         <ModalCloseButton top={4} right={4} />

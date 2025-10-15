@@ -14,12 +14,21 @@ import {
   IconButton,
   Collapse,
   useDisclosure,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  InputRightElement,
+  Spinner,
+  List,
+  ListItem,
 } from '@chakra-ui/react';
 import { 
   IconLayersLinked, 
   IconChevronLeft,
   IconChevronRight,
   IconGripVertical,
+  IconSearch,
+  IconX,
 } from '@tabler/icons-react';
 import 'ol/ol.css';
 import Map from 'ol/Map';
@@ -54,6 +63,11 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
   const [panelPosition, setPanelPosition] = useState({ x: 80, y: 20 }); // Moved right to avoid zoom controls
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
   const { isOpen: isPanelOpen, onToggle: onTogglePanel } = useDisclosure({ defaultIsOpen: false });
   const toast = useToast();
 
@@ -92,6 +106,90 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
       };
     }
   }, [isDragging, dragStart]);
+
+  // Address search functionality
+  const searchAddresses = async (query: string) => {
+    if (query.length < 3) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://api3.geo.admin.ch/rest/services/api/SearchServer?` +
+        `searchText=${encodeURIComponent(query)}&` +
+        `type=locations&` +
+        `origins=address,zipcode,gg25&` +
+        `limit=10&` +
+        `sr=3857&` +
+        `lang=en`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.results || []);
+        setShowResults(true);
+      } else {
+        console.error('Search API error:', response.status);
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleAddressSelect = (result: any) => {
+    const { x, y } = result.attrs;
+    if (mapInstanceRef.current && x && y) {
+      const view = mapInstanceRef.current.getView();
+      view.setCenter([x, y]);
+      view.setZoom(16); // Zoom in to show the selected location
+      
+      setSearchQuery(result.attrs.label.replace(/<[^>]*>/g, '')); // Remove HTML tags
+      setShowResults(false);
+      
+      toast({
+        title: 'Location found',
+        description: `Zoomed to: ${result.attrs.label.replace(/<[^>]*>/g, '')}`,
+        status: 'success',
+        duration: 3000,
+      });
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowResults(false);
+  };
+
+  // Handle search input changes with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        searchAddresses(searchQuery);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Available background layers
   const backgroundLayers = {
@@ -440,6 +538,91 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
 
   return (
     <Box h="100%" w="100%" position="relative">
+      {/* Address Search Bar */}
+      <Box
+        position="absolute"
+        top={4}
+        left="50%"
+        transform="translateX(-50%)"
+        zIndex={1001}
+        w={{ base: "90%", md: "400px" }}
+        ref={searchRef}
+      >
+        <InputGroup size="md">
+          <InputLeftElement pointerEvents="none">
+            <Icon as={IconSearch} color="gray.400" />
+          </InputLeftElement>
+          <Input
+            placeholder="Search for addresses, places..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            bg="white"
+            borderRadius="lg"
+            shadow="lg"
+            border="1px solid"
+            borderColor="gray.200"
+            _focus={{
+              borderColor: "brand.500",
+              boxShadow: "0 0 0 1px var(--chakra-colors-brand-500)",
+            }}
+          />
+          <InputRightElement>
+            {isSearching ? (
+              <Spinner size="sm" color="brand.500" />
+            ) : searchQuery ? (
+              <IconButton
+                aria-label="Clear search"
+                icon={<Icon as={IconX} />}
+                size="sm"
+                variant="ghost"
+                onClick={clearSearch}
+              />
+            ) : null}
+          </InputRightElement>
+        </InputGroup>
+
+        {/* Search Results */}
+        {showResults && searchResults.length > 0 && (
+          <List
+            position="absolute"
+            top="100%"
+            left={0}
+            right={0}
+            bg="white"
+            borderRadius="lg"
+            shadow="lg"
+            border="1px solid"
+            borderColor="gray.200"
+            mt={2}
+            maxH="300px"
+            overflowY="auto"
+            zIndex={1002}
+          >
+            {searchResults.map((result, index) => (
+              <ListItem
+                key={index}
+                p={3}
+                cursor="pointer"
+                _hover={{ bg: "gray.50" }}
+                borderBottom={index < searchResults.length - 1 ? "1px solid" : "none"}
+                borderColor="gray.100"
+                onClick={() => handleAddressSelect(result)}
+              >
+                <Text
+                  fontSize="sm"
+                  dangerouslySetInnerHTML={{ __html: result.attrs.label }}
+                />
+                {result.attrs.detail && (
+                  <Text fontSize="xs" color="gray.600" mt={1}>
+                    {result.attrs.detail}
+                  </Text>
+                )}
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </Box>
+
       {/* Layer Control Panel */}
       <Box
         position="absolute"
