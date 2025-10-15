@@ -104,8 +104,10 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
 
   const { properties } = building;
 
-  const getBuildingTypeBadgeColor = (type: string) => {
-    switch (type.toLowerCase()) {
+  const getBuildingTypeBadgeColor = (type: any) => {
+    // Convert to string and handle null/undefined values
+    const typeStr = String(type || 'unknown').toLowerCase();
+    switch (typeStr) {
       case 'office':
         return 'blue';
       case 'government':
@@ -145,7 +147,7 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
                   {properties.name}
                 </Text>
                 <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
-                  {properties.buildingType}
+                  {String(properties.buildingType || 'Unknown')}
                 </Badge>
               </HStack>
               <Text fontSize="sm" color="gray.600">

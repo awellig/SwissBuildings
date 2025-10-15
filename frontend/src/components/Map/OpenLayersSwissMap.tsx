@@ -459,12 +459,12 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
                   attrs.plz4 || attrs.postcode || attrs.zip,
                   attrs.plzname || attrs.city || attrs.locality
                 ].filter(Boolean).join(' ') || 'Address not available',
-                buildingType: attrs.gklas || attrs.gkode || attrs.building_class || attrs.category || 'Building',
-                constructionYear: attrs.gbauj || attrs.construction_year || new Date().getFullYear(),
-                floors: attrs.gastw || attrs.floors || attrs.number_of_floors || 1,
-                area: attrs.garea || attrs.floor_area || attrs.area || 100,
-                municipality: attrs.ggdenr || attrs.plzname || attrs.municipality || '',
-                zipCode: attrs.plz4 || attrs.postcode || attrs.zip || '',
+                buildingType: String(attrs.gklas || attrs.gkode || attrs.building_class || attrs.category || 'Building'),
+                constructionYear: Number(attrs.gbauj || attrs.construction_year) || new Date().getFullYear(),
+                floors: Number(attrs.gastw || attrs.floors || attrs.number_of_floors) || 1,
+                area: Number(attrs.garea || attrs.floor_area || attrs.area) || 100,
+                municipality: String(attrs.ggdenr || attrs.plzname || attrs.municipality || ''),
+                zipCode: String(attrs.plz4 || attrs.postcode || attrs.zip || ''),
                 // Store all available attributes for debugging
                 rawAttributes: attrs,
                 // Additional Swiss building register fields with fallbacks
