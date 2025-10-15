@@ -1,16 +1,47 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+
+// Create axios instance with default configuration
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add request interceptor for logging
+apiClient.interceptors.request.use(
+  (config) => {
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for error handling
+apiClient.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 // Building API
 export const buildingService = {
   getAllBuildings: async () => {
-    const response = await axios.get(`${API_BASE_URL}/buildings`);
+    const response = await apiClient.get('/buildings');
     return response.data;
   },
 
   getBuildingByEgid: async (egid: string) => {
-    const response = await axios.get(`${API_BASE_URL}/buildings/${egid}`);
+    const response = await apiClient.get(`/buildings/${egid}`);
     return response.data;
   },
 
@@ -21,7 +52,7 @@ export const buildingService = {
     maxLat: number;
   }) => {
     const bboxString = `${bbox.minLng},${bbox.minLat},${bbox.maxLng},${bbox.maxLat}`;
-    const response = await axios.get(`${API_BASE_URL}/buildings/bbox/${bboxString}`);
+    const response = await apiClient.get(`/buildings/bbox/${bboxString}`);
     return response.data;
   }
 };
@@ -29,12 +60,12 @@ export const buildingService = {
 // Environment API
 export const environmentService = {
   getAirQuality: async (lat: number, lng: number) => {
-    const response = await axios.get(`${API_BASE_URL}/environment/air-quality/${lat},${lng}`);
+    const response = await apiClient.get(`/environment/air-quality/${lat},${lng}`);
     return response.data;
   },
 
   getWeatherData: async (lat: number, lng: number) => {
-    const response = await axios.get(`${API_BASE_URL}/environment/weather/${lat},${lng}`);
+    const response = await apiClient.get(`/environment/weather/${lat},${lng}`);
     return response.data;
   }
 };
@@ -42,12 +73,12 @@ export const environmentService = {
 // Energy API
 export const energyService = {
   getEnergyConsumption: async (egid: string) => {
-    const response = await axios.get(`${API_BASE_URL}/energy/consumption/${egid}`);
+    const response = await apiClient.get(`/energy/consumption/${egid}`);
     return response.data;
   },
 
   getEnergyBreakdown: async (egid: string) => {
-    const response = await axios.get(`${API_BASE_URL}/energy/breakdown/${egid}`);
+    const response = await apiClient.get(`/energy/breakdown/${egid}`);
     return response.data;
   }
 };
@@ -55,7 +86,7 @@ export const energyService = {
 // Solar API
 export const solarService = {
   getSolarPotential: async (egid: string) => {
-    const response = await axios.get(`${API_BASE_URL}/solar/potential/${egid}`);
+    const response = await apiClient.get(`/solar/potential/${egid}`);
     return response.data;
   }
 };

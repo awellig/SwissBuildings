@@ -450,9 +450,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
               type: 'Feature',
               properties: {
                 EGID: egid,
-                name: attrs.strname_deinr ? 
-                  `${attrs.strname_deinr} ${attrs.deinr || ''}`.trim() : 
-                  attrs.str_name || attrs.streetname || `Building ${egid}`,
+                name: attrs.strname_deinr || attrs.str_name || attrs.streetname || `Building ${egid}`,
                 address: [
                   attrs.strname_deinr || attrs.str_name || attrs.streetname,
                   attrs.deinr || attrs.house_number,

@@ -200,12 +200,20 @@ const BuildingExplorer = () => {
               aria-label="Platform Information"
               icon={<IconInfoCircle />}
               size="sm"
-              variant="outline"
-              colorScheme="brand"
+              variant="ghost"
+              color="black"
+              _hover={{ bg: "gray.100" }}
               onClick={onInfoOpen}
             />
             {selectedBuilding && (
-              <Badge colorScheme="green" fontSize="sm" px={3} py={1}>
+              <Badge 
+                colorScheme="blackAlpha" 
+                fontSize="sm" 
+                px={3} 
+                py={1}
+                bg="black"
+                color="white"
+              >
                 {selectedBuilding.properties.name}
               </Badge>
             )}
