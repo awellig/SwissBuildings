@@ -40,6 +40,7 @@ import XYZ from 'ol/source/XYZ';
 import { fromLonLat } from 'ol/proj';
 import { GeoJSON } from 'ol/format';
 import { Style, Fill, Stroke } from 'ol/style';
+import { Control } from 'ol/control';
 
 interface OpenLayersSwissMapProps {
   onBuildingClick: (building: any) => void;
@@ -267,6 +268,48 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
         }),
       });
 
+      // Create custom home control
+      const homeControl = new Control({
+        element: (() => {
+          const button = document.createElement('button');
+          button.innerHTML = '🏠'; // Home icon
+          button.className = 'ol-control ol-unselectable';
+          button.title = 'Zoom to Switzerland';
+          button.style.cssText = `
+            position: absolute;
+            top: 65px;
+            left: 0.5em;
+            background: rgba(255,255,255,.8);
+            border: none;
+            border-radius: 2px;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 5px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          `;
+          
+          button.addEventListener('click', () => {
+            const view = map.getView();
+            view.animate({
+              center: fromLonLat([7.4474, 46.9480]), // Bern coordinates
+              zoom: 8, // Zoom level to see all of Switzerland
+              duration: 1000,
+            });
+          });
+          
+          const controlDiv = document.createElement('div');
+          controlDiv.appendChild(button);
+          return controlDiv;
+        })(),
+      });
+
+      // Add the home control to the map
+      map.addControl(homeControl);
+
       // Store layer references for dynamic control
       layersRef.current.set('background', backgroundLayer);
       layersRef.current.set('buildings', buildingsLayer);
@@ -391,35 +434,51 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
             }
             
             // Extract building data from Swiss Federal Building Registry
-            const attrs = feature.attributes || {};
-            const egid = attrs.egid || attrs.EGID || feature.featureId || 'Unknown';
+            const attrs = feature.attributes || feature.properties || {};
+            const featureId = feature.featureId || feature.id;
             
-            console.log('Building found - EGID:', egid);
+            console.log('Building found - Feature:', feature);
             console.log('Building attributes:', attrs);
+            console.log('Feature ID:', featureId);
             
-            // Create enhanced building object with Swiss building registry data
+            // Try to extract EGID from different possible locations
+            const egid = attrs.egid || attrs.EGID || featureId || feature.layerBodId || 'Unknown';
+            
+            // Create enhanced building object with available data
+            // Since Swiss building API might have different attribute names, we'll use fallbacks
             const buildingData = {
               type: 'Feature',
               properties: {
                 EGID: egid,
-                name: attrs.strname_deinr ? `${attrs.strname_deinr} ${attrs.deinr || ''}`.trim() : `Building ${egid}`,
-                address: [attrs.strname_deinr, attrs.deinr, attrs.plz4, attrs.plzname].filter(Boolean).join(' ') || 'Address not available',
-                buildingType: attrs.gklas || attrs.gkode || 'Residential Building',
-                constructionYear: attrs.gbauj || new Date().getFullYear(),
-                floors: attrs.gastw || 1,
-                area: attrs.garea || 100,
-                municipality: attrs.ggdenr || attrs.plzname || '',
-                zipCode: attrs.plz4 || '',
-                // Additional Swiss building register fields
+                name: attrs.strname_deinr ? 
+                  `${attrs.strname_deinr} ${attrs.deinr || ''}`.trim() : 
+                  attrs.str_name || attrs.streetname || `Building ${egid}`,
+                address: [
+                  attrs.strname_deinr || attrs.str_name || attrs.streetname,
+                  attrs.deinr || attrs.house_number,
+                  attrs.plz4 || attrs.postcode || attrs.zip,
+                  attrs.plzname || attrs.city || attrs.locality
+                ].filter(Boolean).join(' ') || 'Address not available',
+                buildingType: attrs.gklas || attrs.gkode || attrs.building_class || attrs.category || 'Building',
+                constructionYear: attrs.gbauj || attrs.construction_year || new Date().getFullYear(),
+                floors: attrs.gastw || attrs.floors || attrs.number_of_floors || 1,
+                area: attrs.garea || attrs.floor_area || attrs.area || 100,
+                municipality: attrs.ggdenr || attrs.plzname || attrs.municipality || '',
+                zipCode: attrs.plz4 || attrs.postcode || attrs.zip || '',
+                // Store all available attributes for debugging
+                rawAttributes: attrs,
+                // Additional Swiss building register fields with fallbacks
                 coordinates: attrs.gkoor_e && attrs.gkoor_n ? [attrs.gkoor_e, attrs.gkoor_n] : [x, y],
-                status: attrs.gstat || 'Active',
-                category: attrs.gkat || 'Building'
+                status: attrs.gstat || attrs.status || 'Active',
+                category: attrs.gkat || attrs.category || 'Building'
               },
               geometry: feature.geometry || {
                 type: 'Point',
                 coordinates: [x, y]
               }
             };
+
+            console.log('Processed building data:', buildingData);
 
             onBuildingClick(buildingData);
             
@@ -542,10 +601,9 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
       <Box
         position="absolute"
         top={4}
-        left="50%"
-        transform="translateX(-50%)"
+        right={4}
         zIndex={1001}
-        w={{ base: "90%", md: "400px" }}
+        w={{ base: "280px", md: "350px" }}
         ref={searchRef}
       >
         <InputGroup size="md">

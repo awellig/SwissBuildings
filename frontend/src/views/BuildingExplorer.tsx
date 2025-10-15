@@ -12,7 +12,29 @@ import {
   useToast,
   Container,
   Flex,
+  IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  List,
+  ListItem,
+  Code,
 } from '@chakra-ui/react';
+import { 
+  IconInfoCircle,
+  IconCode,
+  IconMap,
+  IconDatabase,
+} from '@tabler/icons-react';
 import { OpenLayersSwissMap } from '../components/Map/OpenLayersSwissMap';
 import { BuildingPopup } from '../components/Popup/BuildingPopup';
 import { buildingService } from '../services/api';
@@ -34,18 +56,13 @@ interface BuildingFeature {
   };
 }
 
-interface BuildingCollection {
-  type: 'FeatureCollection';
-  features: BuildingFeature[];
-}
-
 const BuildingExplorer = () => {
-  const [buildings, setBuildings] = useState<BuildingCollection | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingFeature | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(true);
+  const { isOpen: isInfoOpen, onOpen: onInfoOpen, onClose: onInfoClose } = useDisclosure();
   const toast = useToast();
 
   useEffect(() => {
@@ -64,7 +81,8 @@ const BuildingExplorer = () => {
         const data = await buildingService.getAllBuildings();
         
         if (isMounted) {
-          setBuildings(data);
+          // Buildings data loaded successfully
+          console.log('Buildings data loaded:', data?.features?.length || 0, 'buildings');
         }
       } catch (err) {
         console.error('Error fetching buildings:', err);
@@ -178,11 +196,14 @@ const BuildingExplorer = () => {
           </HStack>
           
           <HStack spacing={4}>
-            {buildings && (
-              <Badge colorScheme="brand" fontSize="sm" px={3} py={1}>
-                {buildings.features.length} Buildings
-              </Badge>
-            )}
+            <IconButton
+              aria-label="Platform Information"
+              icon={<IconInfoCircle />}
+              size="sm"
+              variant="outline"
+              colorScheme="brand"
+              onClick={onInfoOpen}
+            />
             {selectedBuilding && (
               <Badge colorScheme="green" fontSize="sm" px={3} py={1}>
                 {selectedBuilding.properties.name}
@@ -212,6 +233,176 @@ const BuildingExplorer = () => {
         isOpen={isPopupOpen}
         onClose={handleClosePopup}
       />
+
+      {/* Platform Information Modal */}
+      <Modal isOpen={isInfoOpen} onClose={onInfoClose} size="4xl" scrollBehavior="inside">
+        <ModalOverlay />
+        <ModalContent maxH="90vh">
+          <ModalHeader>
+            <HStack>
+              <IconInfoCircle color="var(--chakra-colors-brand-500)" />
+              <Text>Swiss Buildings Explorer - Platform Information</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          
+          <ModalBody>
+            <Tabs variant="enclosed" colorScheme="brand">
+              <TabList>
+                <Tab><HStack><IconInfoCircle size={16} /><Text>Overview</Text></HStack></Tab>
+                <Tab><HStack><IconMap size={16} /><Text>Features</Text></HStack></Tab>
+                <Tab><HStack><IconCode size={16} /><Text>Technology</Text></HStack></Tab>
+                <Tab><HStack><IconDatabase size={16} /><Text>Data Sources</Text></HStack></Tab>
+              </TabList>
+
+              <TabPanels>
+                <TabPanel>
+                  <VStack align="start" spacing={4}>
+                    <Text fontSize="lg" fontWeight="bold" color="brand.600">
+                      Professional Swiss Building Data Visualization Platform
+                    </Text>
+                    <Text color="gray.700">
+                      The Swiss Buildings Explorer is a comprehensive geospatial application designed to visualize and interact with 
+                      Swiss building data. Built with modern web technologies and professional-grade mapping capabilities, this platform 
+                      provides real-time access to building information across Switzerland.
+                    </Text>
+                    
+                    <Text fontWeight="semibold" color="brand.600">Key Capabilities:</Text>
+                    <List spacing={2} ml={4}>
+                      <ListItem>• Interactive 2D mapping with Swiss coordinate systems</ListItem>
+                      <ListItem>• Real-time building identification and information retrieval</ListItem>
+                      <ListItem>• Address search with autocomplete functionality</ListItem>
+                      <ListItem>• Comprehensive building analytics and environmental data</ListItem>
+                      <ListItem>• Professional data visualization and export capabilities</ListItem>
+                    </List>
+                  </VStack>
+                </TabPanel>
+
+                <TabPanel>
+                  <VStack align="start" spacing={4}>
+                    <Text fontSize="lg" fontWeight="bold" color="brand.600">
+                      Platform Features
+                    </Text>
+                    
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Mapping & Navigation:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• Swiss national map layers (color, grayscale, aerial imagery)</ListItem>
+                        <ListItem>• Building visualization with red roof rendering</ListItem>
+                        <ListItem>• Zoom-dependent layer visibility and scale optimization</ListItem>
+                        <ListItem>• Draggable layer controls and UI components</ListItem>
+                      </List>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Data Integration:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• Swiss Federal Building Registry (ch.bfs.gebaeude_wohnungs_register)</ListItem>
+                        <ListItem>• Real-time building identification with Swiss GeoAdmin API</ListItem>
+                        <ListItem>• Environmental data from NABEL monitoring stations</ListItem>
+                        <ListItem>• Solar potential data from SFOE Sonnendach</ListItem>
+                      </List>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">User Experience:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• Address search with Swiss geocoding service</ListItem>
+                        <ListItem>• Draggable popups and control panels</ListItem>
+                        <ListItem>• Responsive design for desktop and mobile</ListItem>
+                        <ListItem>• Professional Capgemini branding and styling</ListItem>
+                      </List>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+
+                <TabPanel>
+                  <VStack align="start" spacing={4}>
+                    <Text fontSize="lg" fontWeight="bold" color="brand.600">
+                      Technology Stack
+                    </Text>
+                    
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Frontend Technologies:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• <Code>React 18</Code> with TypeScript for type-safe development</ListItem>
+                        <ListItem>• <Code>Chakra UI</Code> for professional component library</ListItem>
+                        <ListItem>• <Code>OpenLayers</Code> for advanced 2D mapping capabilities</ListItem>
+                        <ListItem>• <Code>Vite</Code> for optimized build and development</ListItem>
+                      </List>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Mapping & GIS:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• Swiss coordinate systems (LV03, LV95, Web Mercator)</ListItem>
+                        <ListItem>• WMTS tile services for optimal performance</ListItem>
+                        <ListItem>• GeoJSON for feature data exchange</ListItem>
+                        <ListItem>• Professional cartographic rendering</ListItem>
+                      </List>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">API Integration:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• Swiss GeoAdmin REST API services</ListItem>
+                        <ListItem>• Federal Statistical Office building registry</ListItem>
+                        <ListItem>• RESTful architecture with proper error handling</ListItem>
+                        <ListItem>• Real-time data synchronization</ListItem>
+                      </List>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+
+                <TabPanel>
+                  <VStack align="start" spacing={4}>
+                    <Text fontSize="lg" fontWeight="bold" color="brand.600">
+                      Official Data Sources
+                    </Text>
+                    
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Primary Data Sources:</Text>
+                      <List spacing={2} ml={4} mt={2}>
+                        <ListItem>
+                          • <a href="https://www.bfs.admin.ch/bfs/en/home/services/ogd/portal.html" 
+                               target="_blank" rel="noopener noreferrer" 
+                               style={{ color: 'var(--chakra-colors-brand-500)', textDecoration: 'underline' }}>
+                              opendata.swiss
+                            </a> - Swiss Federal Statistical Office
+                        </ListItem>
+                        <ListItem>• Swiss Federal Building and Dwelling Register (GWR)</ListItem>
+                        <ListItem>• NABEL - National Air Pollution Monitoring Network</ListItem>
+                        <ListItem>• MeteoSwiss - Federal Office of Meteorology and Climatology</ListItem>
+                        <ListItem>• SFOE Sonnendach - Solar Potential Database</ListItem>
+                      </List>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Technical Services:</Text>
+                      <List spacing={2} ml={4} mt={2}>
+                        <ListItem>• <Code>api3.geo.admin.ch</Code> - Swiss GeoAdmin API</ListItem>
+                        <ListItem>• <Code>wmts.geo.admin.ch</Code> - Web Map Tile Service</ListItem>
+                        <ListItem>• Swiss national coordinate reference systems</ListItem>
+                        <ListItem>• Real-time building identification services</ListItem>
+                      </List>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" color="brand.600">Data Compliance:</Text>
+                      <List spacing={1} ml={4} mt={2}>
+                        <ListItem>• Official Swiss government data sources</ListItem>
+                        <ListItem>• GDPR and Swiss data protection compliance</ListItem>
+                        <ListItem>• Proper attribution and licensing</ListItem>
+                        <ListItem>• Real-time data synchronization with federal systems</ListItem>
+                      </List>
+                    </Box>
+                  </VStack>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
 
       {/* Footer */}
       <Box

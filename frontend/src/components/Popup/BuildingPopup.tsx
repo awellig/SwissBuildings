@@ -98,7 +98,9 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   }, [isDragging, dragStart]);
 
   // Early return after all hooks have been called
-  if (!building) return null;
+  if (!building) {
+    return null;
+  }
 
   const { properties } = building;
 
