@@ -62,7 +62,7 @@ export const solarService = {
 
 // Indoor API (simulated for demo)
 export const indoorService = {
-  getIndoorData: async (egid: string) => {
+  getIndoorData: async (_egid: string) => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
