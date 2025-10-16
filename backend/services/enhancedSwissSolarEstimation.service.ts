@@ -318,34 +318,48 @@ export class EnhancedSwissSolarEstimationService {
     installationCost: number;
     paybackPeriod: number;
   } {
-    // Swiss solar installation costs (2024)
-    const costPerKwp = 1800; // CHF/kWp (including VAT, typical for residential)
+    // Swiss solar installation costs (2024) - economies of scale
+    let costPerKwp: number;
+    if (solarCalculation.potentialKwp <= 10) costPerKwp = 1900; // Small systems
+    else if (solarCalculation.potentialKwp <= 30) costPerKwp = 1700; // Medium systems
+    else costPerKwp = 1500; // Large systems (economies of scale)
+    
     const installationCost = solarCalculation.potentialKwp * costPerKwp;
     
-    // Swiss feed-in tariff and electricity prices
-    const electricityPrice = 0.25; // CHF/kWh (average Swiss household rate)
-    const feedInTariff = 0.07; // CHF/kWh (typical Swiss rate)
+    // Updated Swiss energy economics (2024)
+    const electricityPrice = 0.28; // CHF/kWh (realistic Swiss household rate incl. taxes)
+    const feedInTariff = 0.12; // CHF/kWh (updated Swiss feed-in rate 2024)
     
-    // Annual savings (assuming 30% self-consumption)
-    const selfConsumptionRate = 0.30;
+    // Modern self-consumption with smart systems and battery storage potential
+    const selfConsumptionRate = 0.65; // 65% with modern energy management
     const selfConsumedEnergy = solarCalculation.annualProduction * selfConsumptionRate;
     const feedInEnergy = solarCalculation.annualProduction * (1 - selfConsumptionRate);
     
-    const annualSavings = (selfConsumedEnergy * electricityPrice) + (feedInEnergy * feedInTariff);
+    // Annual financial benefits
+    const electricitySavings = selfConsumedEnergy * electricityPrice;
+    const feedInRevenue = feedInEnergy * feedInTariff;
+    const annualSavings = electricitySavings + feedInRevenue;
     
-    // Payback period
-    const paybackPeriod = installationCost / Math.max(annualSavings, 1);
+    // Swiss solar tax benefits (one-time deduction)
+    const taxBenefit = installationCost * 0.15; // 15% tax deduction
+    const effectiveInstallationCost = installationCost - taxBenefit;
     
-    // Economic viability assessment
+    // Payback period calculation
+    const paybackPeriod = effectiveInstallationCost / Math.max(annualSavings, 1);
+    
+    // Swiss PV industry standard economic viability assessment
+    // Based on Swissolar recommendations and current market conditions
     let economicViability: 'excellent' | 'good' | 'moderate' | 'poor';
-    if (paybackPeriod <= 8) economicViability = 'excellent';
-    else if (paybackPeriod <= 12) economicViability = 'good';
-    else if (paybackPeriod <= 18) economicViability = 'moderate';
-    else economicViability = 'poor';
+    if (paybackPeriod <= 6) economicViability = 'excellent';      // Outstanding ROI
+    else if (paybackPeriod <= 10) economicViability = 'good';     // Very attractive
+    else if (paybackPeriod <= 15) economicViability = 'moderate'; // Acceptable
+    else economicViability = 'poor';                              // Not recommended
+    
+    console.log(`💰 Economics: ${solarCalculation.potentialKwp}kWp system, cost: ${costPerKwp}CHF/kWp, self-consumption: 65%, payback: ${paybackPeriod.toFixed(1)} years → ${economicViability}`);
     
     return {
       economicViability,
-      installationCost: Math.round(installationCost),
+      installationCost: Math.round(effectiveInstallationCost), // Show cost after tax benefits
       paybackPeriod: Math.round(paybackPeriod * 10) / 10
     };
   }
@@ -361,13 +375,39 @@ export class EnhancedSwissSolarEstimationService {
     console.log('🏠 Using industry standard building-based calculation');
     console.log('📊 Building Input Data:', buildingData);
     
-    // Use industry standard roof area calculation
-    const totalFloorArea = buildingData.floorArea || 150; // Better default
-    const floors = buildingData.floors || 2;
-    const groundFloorArea = totalFloorArea / Math.max(1, floors);
-    const roofArea = groundFloorArea * 0.85; // 85% of ground floor area
-    const suitableArea = roofArea * 0.6; // 60% of roof suitable for solar
-    const potentialKwp = suitableArea * 0.18; // 180W per m² (modern panels)
+    // Use industry standard roof area calculation with Swiss building standards
+    const totalFloorArea = buildingData.floorArea || 150;
+    const floors = Math.max(1, buildingData.floors || 2);
+    const groundFloorArea = totalFloorArea / floors;
+    
+    // Roof area estimation based on Swiss building standards
+    let roofMultiplier = 0.85; // Standard flat/simple roofs
+    
+    // Adjust for building type if available
+    const buildingType = (buildingData.buildingType || '').toString();
+    if (buildingType.includes('1010') || buildingType.includes('1020')) { // Single/multi-family
+      roofMultiplier = 0.90; // Residential typically has simpler roofs
+    } else if (buildingType.includes('1262') || buildingType.includes('1263')) { // Industrial/warehouse  
+      roofMultiplier = 0.95; // Large industrial roofs are very suitable
+    } else if (buildingType.includes('1311') || buildingType.includes('1312')) { // Schools/universities
+      roofMultiplier = 0.80; // Educational buildings often have complex roofs
+    }
+    
+    const roofArea = groundFloorArea * roofMultiplier;
+    
+    // Suitable area for PV installation (Swiss PV industry standards)
+    let suitabilityFactor = 0.65; // Modern approach: 65% of roof suitable
+    
+    // Adjust based on roof size (larger roofs = better utilization)
+    if (roofArea >= 200) suitabilityFactor = 0.70; // Large roofs
+    else if (roofArea >= 100) suitabilityFactor = 0.65; // Medium roofs  
+    else if (roofArea < 50) suitabilityFactor = 0.55; // Small roofs (more edge effects)
+    
+    const suitableArea = roofArea * suitabilityFactor;
+    
+    // Modern PV panel efficiency (Swiss market standards 2024)
+    const panelEfficiency = 0.22; // 220W per m² (high-efficiency panels)
+    const potentialKwp = suitableArea * panelEfficiency;
     
     // Switzerland has excellent solar irradiation - use location-specific values
     const swissIrradiation = this.getSwissIrradiationByLocation(coordinates);
@@ -376,8 +416,14 @@ export class EnhancedSwissSolarEstimationService {
     // Calculate proper economics for Switzerland
     const economics = this.calculateEconomics({ potentialKwp, annualProduction }, coordinates);
     
-    console.log(`📊 Building Calculation: TotalFloor=${totalFloorArea}m² ÷ ${floors} floors = ${groundFloorArea.toFixed(0)}m² ground → ${roofArea.toFixed(0)}m² roof → ${suitableArea.toFixed(0)}m² suitable`);
-    console.log(`🌞 Swiss irradiation: ${swissIrradiation} kWh/m²/year for coordinates [${coordinates[0]}, ${coordinates[1]}]`);
+    console.log(`📊 Detailed Calculation:
+    • Total Floor Area: ${totalFloorArea}m²
+    • Floors: ${floors} → Ground Floor: ${groundFloorArea.toFixed(0)}m²
+    • Building Type: ${buildingType} → Roof Multiplier: ${roofMultiplier}
+    • Roof Area: ${roofArea.toFixed(0)}m² (${(roofMultiplier*100).toFixed(0)}% of ground floor)
+    • Suitable Area: ${suitableArea.toFixed(0)}m² (${(suitabilityFactor*100).toFixed(0)}% of roof)
+    • Panel Efficiency: ${panelEfficiency*1000}W/m² → Potential: ${potentialKwp.toFixed(1)}kWp`);
+    console.log(`🌞 Swiss irradiation: ${swissIrradiation} kWh/m²/year for coordinates [${coordinates[0].toFixed(4)}, ${coordinates[1].toFixed(4)}]`);
     
     return {
       roofArea: Math.round(roofArea),
@@ -436,13 +482,52 @@ export class EnhancedSwissSolarEstimationService {
   }
 
   /**
-   * Get Swiss building suitability class based on roof characteristics
+   * Get Swiss building suitability class based on roof characteristics and location
+   * Uses Swiss PV industry standards and Swissolar recommendations
    */
   private getSwissSuitabilityClass(roofArea: number, coordinates: [number, number]): string {
-    // Switzerland generally has excellent solar conditions
-    if (roofArea >= 200) return 'Excellent';
-    if (roofArea >= 100) return 'Very Good';
-    if (roofArea >= 50) return 'Good';
-    return 'Moderate';
+    const [lon, lat] = coordinates;
+    
+    // Base suitability score
+    let suitabilityScore = 70; // Switzerland baseline (good solar conditions)
+    
+    // Roof area factor (larger roofs = better economics)
+    if (roofArea >= 300) suitabilityScore += 20;        // Large commercial
+    else if (roofArea >= 150) suitabilityScore += 15;   // Large residential
+    else if (roofArea >= 80) suitabilityScore += 10;    // Medium residential  
+    else if (roofArea >= 40) suitabilityScore += 5;     // Small residential
+    else suitabilityScore -= 10;                        // Very small roofs
+    
+    // Regional solar irradiation bonus
+    // Valais (highest irradiation)
+    if (lon >= 7.0 && lon <= 8.5 && lat >= 45.8 && lat <= 46.6) {
+      suitabilityScore += 15; // Excellent conditions
+    }
+    // Ticino (southern)
+    else if (lon >= 8.5 && lon <= 9.5 && lat >= 45.8 && lat <= 46.5) {
+      suitabilityScore += 12; // Very good conditions
+    }
+    // Graubünden (high altitude advantage)
+    else if (lon >= 9.0 && lon <= 10.6 && lat >= 46.0 && lat <= 47.1) {
+      suitabilityScore += 8; // Good high-altitude conditions
+    }
+    // Central Switzerland
+    else if (lat >= 46.5 && lat <= 47.8) {
+      suitabilityScore += 5; // Good conditions
+    }
+    // Northern regions
+    else if (lat >= 47.2) {
+      suitabilityScore += 2; // Still good for Switzerland
+    }
+    
+    // Ensure realistic bounds for Switzerland (even worst case is decent)
+    suitabilityScore = Math.max(50, Math.min(100, suitabilityScore));
+    
+    // Classification based on Swiss PV industry standards
+    if (suitabilityScore >= 90) return 'Excellent';      // Outstanding conditions
+    else if (suitabilityScore >= 80) return 'Very Good'; // Strong potential
+    else if (suitabilityScore >= 70) return 'Good';      // Solid investment
+    else if (suitabilityScore >= 60) return 'Moderate';  // Acceptable
+    else return 'Fair';                                  // Minimal but viable
   }
 }
