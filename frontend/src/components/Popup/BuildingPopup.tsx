@@ -76,23 +76,25 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
     if (!isDragging) return;
     
     e.preventDefault();
+    e.stopPropagation();
     
     // Calculate new position with bounds checking
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
     
     // Prevent dragging outside viewport
-    const maxX = window.innerWidth - 100; // Leave some margin
-    const maxY = window.innerHeight - 100;
+    const maxX = window.innerWidth - 200; // Leave more margin
+    const maxY = window.innerHeight - 200;
     
     setPosition({
-      x: Math.max(-100, Math.min(maxX, newX)),
+      x: Math.max(-50, Math.min(maxX, newX)),
       y: Math.max(0, Math.min(maxY, newY)),
     });
   };
 
   const handleMouseUp = (e: MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
   };
 
@@ -144,7 +146,14 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside" closeOnOverlayClick={!isDragging}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      size="4xl" 
+      scrollBehavior="inside" 
+      closeOnOverlayClick={!isDragging}
+      closeOnEsc={!isDragging}
+    >
       <ModalOverlay />
       <ModalContent 
         maxH="90vh"
@@ -165,14 +174,15 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
           _active={{ cursor: 'grabbing' }}
           _hover={{ bg: 'gray.100', boxShadow: 'md' }}
           onMouseDown={handleMouseDown}
-          px={3}
-          py={1}
+          px={4}
+          py={2}
           borderRadius="full"
           bg="white"
-          boxShadow="sm"
+          boxShadow="lg"
           border="2px solid"
           borderColor="gray.300"
           transition="all 0.2s"
+          userSelect="none"
         >
           <Icon as={IconGripHorizontal} color="gray.500" boxSize={5} />
         </Box>
@@ -189,9 +199,28 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
               </Badge>
             </HStack>
             <Text fontSize="sm" color="gray.600">
-              {properties.address && properties.address !== 'Address lookup in progress...' 
-                ? properties.address 
-                : 'Address not available'} • EGID: {properties.EGID}
+              {(() => {
+                // Clean up address to prevent duplication
+                let displayAddress = 'Address not available';
+                
+                if (properties.address && properties.address !== 'Address lookup in progress...') {
+                  // Remove duplicate parts (e.g., "Kirchstrasse 72 72" -> "Kirchstrasse 72")
+                  const parts = properties.address.trim().split(' ');
+                  const cleanParts = [];
+                  let lastPart = '';
+                  
+                  for (const part of parts) {
+                    if (part !== lastPart) {
+                      cleanParts.push(part);
+                    }
+                    lastPart = part;
+                  }
+                  
+                  displayAddress = cleanParts.join(' ');
+                }
+                
+                return `${displayAddress} • EGID: ${properties.EGID}`;
+              })()}
             </Text>
           </VStack>
         </ModalHeader>
