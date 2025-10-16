@@ -118,8 +118,9 @@ export class SolarService {
     }
   }
 
-  async getSolarPotential(egid: string): Promise<SolarPotential> {
+  async getSolarPotential(egid: string, providedBuildingData?: any): Promise<SolarPotential> {
     console.log(`☀️  SFOE Sonnendach Solar Request - EGID: ${egid}`);
+    console.log(`🏠 Provided building data:`, providedBuildingData);
     
     try {
       const cacheKey = `solar_potential_${egid}`;
@@ -194,22 +195,37 @@ export class SolarService {
       console.log(`📊 No official solar data found, using enhanced estimation algorithm for EGID ${egid}`);
       
       // Get comprehensive building data for estimation
-      const buildingData = await this.buildingDataService.getBuildingData(egid);
+      // Use provided building data if available, otherwise fetch from service
+      let buildingData = providedBuildingData;
       
-      if (buildingData) {
+      if (!buildingData || !buildingData.floorArea) {
+        console.log(`🔍 No building data provided, fetching from building service...`);
+        buildingData = await this.buildingDataService.getBuildingData(egid);
+      }
+      
+      if (buildingData && buildingData.floorArea) {
+        console.log(`✅ Using building data: Floor Area=${buildingData.floorArea}m², Floors=${buildingData.floors || 'unknown'}`);
+        
         const estimatedSolar = await this.solarEstimationService.estimateSolarPotential(
           buildingData.coordinates || coordinates || [600000, 200000], // Swiss default coordinates
-          buildingData
+          {
+            egid,
+            floorArea: buildingData.floorArea,
+            floors: buildingData.floors,
+            constructionYear: buildingData.constructionYear,
+            buildingType: buildingData.buildingType || providedBuildingData?.buildingType
+          }
         );
         
         // Cache the estimated result
         this.cache.set(cacheKey, estimatedSolar, 86400);
         return estimatedSolar;
       } else {
+        console.log(`⚠️ No building data available, using fallback estimation`);
         // Fallback with minimal data
         const fallbackEstimate = await this.solarEstimationService.estimateSolarPotential(
           coordinates || [600000, 200000], // Swiss default coordinates
-          { egid }
+          { egid, floorArea: providedBuildingData?.area || providedBuildingData?.floorArea }
         );
         
         this.cache.set(cacheKey, fallbackEstimate, 86400);

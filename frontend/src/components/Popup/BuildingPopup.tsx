@@ -16,7 +16,6 @@ import {
   Badge,
   Icon,
   Divider,
-  Box,
 } from '@chakra-ui/react';
 import { 
   IconBuilding, 
@@ -24,7 +23,6 @@ import {
   IconHome, 
   IconBolt, 
   IconSun,
-  IconGripHorizontal,
 } from '@tabler/icons-react';
 import { GeneralInfoTab } from '../Tabs/GeneralInfoTab';
 import { EnvironmentTab } from '../Tabs/EnvironmentTab';
@@ -32,6 +30,7 @@ import { IndoorTab } from '../Tabs/IndoorTab';
 import { EnergyTab } from '../Tabs/EnergyTab';
 import { SolarTab } from '../Tabs/SolarTab';
 import { useState, useEffect } from 'react';
+import { getSwissBuildingType, getBuildingTypeBadgeColor, getFullCantonName } from '../../utils/swissBuildingTypes';
 
 interface BuildingFeature {
   type: 'Feature';
@@ -57,69 +56,117 @@ interface BuildingPopupProps {
 }
 
 export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps) => {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [locationInfo, setLocationInfo] = useState({ city: '', canton: '', postalCode: '' });
 
-  // Handle modal dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Calculate new position with bounds checking
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-    
-    // Prevent dragging outside viewport
-    const maxX = window.innerWidth - 200; // Leave more margin
-    const maxY = window.innerHeight - 200;
-    
-    setPosition({
-      x: Math.max(-50, Math.min(maxX, newX)),
-      y: Math.max(0, Math.min(maxY, newY)),
-    });
-  };
-
-  const handleMouseUp = (e: MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  // Add global mouse event listeners for dragging
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+  // Swiss reverse geocoding function to get city/canton from coordinates
+  const getSwissLocationFromCoordinates = async (coordinates: [number, number]) => {
+    try {
+      const [lng, lat] = coordinates;
+      console.log('Reverse geocoding for coordinates:', lng, lat);
       
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.body.style.userSelect = '';
-      };
+      // Try the Swiss geo.admin.ch reverse geocoding service first
+      const reverseGeoUrl = `https://api3.geo.admin.ch/rest/services/api/MapServer/identify?` +
+        `geometryType=esriGeometryPoint&` +
+        `geometry=${lng},${lat}&` +
+        `mapExtent=0,0,1000000,1000000&` +
+        `imageDisplay=1,1,96&` +
+        `sr=4326&` +
+        `layers=all:ch.bfs.gebaeude_wohnungs_register&` +
+        `returnGeometry=false`;
+      
+      const reverseResponse = await fetch(reverseGeoUrl);
+      
+      if (reverseResponse.ok) {
+        const reverseData = await reverseResponse.json();
+        console.log('Reverse geocoding response:', reverseData);
+        
+        if (reverseData.results && reverseData.results.length > 0) {
+          const result = reverseData.results[0];
+          const attrs = result.attributes;
+          
+          if (attrs) {
+            return {
+              city: attrs.ggdename || attrs.plzname || attrs.city || '',
+              canton: attrs.gkanton || attrs.canton || '',
+              postalCode: attrs.plz4 || attrs.zip || attrs.postalcode || '',
+            };
+          }
+        }
+      }
+      
+      // Fallback: Try the search server approach
+      const searchUrl = `https://api3.geo.admin.ch/rest/services/api/SearchServer?` +
+        `searchText=${lng},${lat}&` +
+        `type=locations&` +
+        `limit=1&` +
+        `origins=address&` +
+        `sr=4326`;
+      
+      const searchResponse = await fetch(searchUrl);
+      
+      if (searchResponse.ok) {
+        const searchData = await searchResponse.json();
+        console.log('Search server response:', searchData);
+        
+        if (searchData.results && searchData.results.length > 0) {
+          const result = searchData.results[0];
+          const attrs = result.attrs;
+          
+          return {
+            city: attrs.city || attrs.municipality || attrs.plzname || '',
+            canton: attrs.canton || attrs.gkanton || '',
+            postalCode: attrs.zip || attrs.postalcode || attrs.plz4 || '',
+          };
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error getting Swiss location:', error);
     }
-  }, [isDragging, dragStart.x, dragStart.y]);
+    
+    return { city: '', canton: '', postalCode: '' };
+  };
 
-  // Reset position when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setPosition({ x: 0, y: 0 });
-      setIsDragging(false);
+  // Clean address function
+  const cleanAddress = (address: string) => {
+    if (!address || address === 'Address lookup in progress...') {
+      return 'Address not available';
     }
-  }, [isOpen]);
+
+    let cleaned = address.trim();
+    
+    // Handle formats like "Hotelgasse 4  2600704.126" - remove coordinates
+    cleaned = cleaned.replace(/\s+\d{7}\.\d+/, '');
+    
+    // Remove duplicate parts (e.g., "Kirchstrasse 72 72" -> "Kirchstrasse 72")
+    const parts = cleaned.split(/\s+/);
+    const uniqueParts = [];
+    let lastPart = '';
+    for (const part of parts) {
+      if (part !== lastPart && part.length > 0) {
+        uniqueParts.push(part);
+      }
+      lastPart = part;
+    }
+    
+    return uniqueParts.join(' ') || address;
+  };
+
+
+
+  // Fetch location information when building changes
+  useEffect(() => {
+    const fetchLocationInfo = async () => {
+      if (building?.geometry?.coordinates) {
+        const locationData = await getSwissLocationFromCoordinates(building.geometry.coordinates);
+        setLocationInfo(locationData);
+      }
+    };
+
+    if (building) {
+      fetchLocationInfo();
+    }
+  }, [building]);
 
   // Early return after all hooks have been called
   if (!building) {
@@ -128,20 +175,20 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
 
   const { properties } = building;
 
-  const getBuildingTypeBadgeColor = (type: any) => {
-    // Convert to string and handle null/undefined values
-    const typeStr = String(type || 'unknown').toLowerCase();
-    switch (typeStr) {
-      case 'office':
-        return 'blue';
-      case 'government':
-        return 'purple';
-      case 'educational':
-        return 'green';
-      case 'residential':
-        return 'orange';
-      default:
-        return 'gray';
+  // Combine location info with clean address
+  const addressInfo = {
+    city: locationInfo.city,
+    canton: locationInfo.canton,
+    cleanAddress: cleanAddress(properties.address),
+    postalCode: locationInfo.postalCode
+  };
+
+  // Create a cleaned building object to pass to tabs
+  const cleanedBuilding: BuildingFeature = {
+    ...building,
+    properties: {
+      ...building.properties,
+      address: addressInfo.cleanAddress
     }
   };
 
@@ -150,81 +197,54 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
       isOpen={isOpen} 
       onClose={onClose} 
       size="4xl" 
-      scrollBehavior="inside" 
-      closeOnOverlayClick={!isDragging}
-      closeOnEsc={!isDragging}
+      scrollBehavior="inside"
+      isCentered
     >
       <ModalOverlay />
-      <ModalContent 
-        maxH="90vh"
-        transform={`translate(${position.x}px, ${position.y}px)`}
-        cursor={isDragging ? 'grabbing' : 'default'}
-        position="relative"
-        boxShadow="2xl"
-        transition={isDragging ? 'none' : 'transform 0.2s ease'}
-      >
-        {/* Improved Drag Handle */}
-        <Box
-          position="absolute"
-          top={2}
-          left="50%"
-          transform="translateX(-50%)"
-          zIndex={1000}
-          cursor="grab"
-          _active={{ cursor: 'grabbing' }}
-          _hover={{ bg: 'gray.100', boxShadow: 'md' }}
-          onMouseDown={handleMouseDown}
-          px={4}
-          py={2}
-          borderRadius="full"
-          bg="white"
-          boxShadow="lg"
-          border="2px solid"
-          borderColor="gray.300"
-          transition="all 0.2s"
-          userSelect="none"
-        >
-          <Icon as={IconGripHorizontal} color="gray.500" boxSize={5} />
-        </Box>
-        
-        <ModalHeader pb={3} pt={8}>
+      <ModalContent maxH="90vh">
+        <ModalHeader pb={3} pt={6}>
           <VStack align="start" spacing={2} flex={1}>
             <HStack>
               <Icon as={IconBuilding} color="brand.500" boxSize={6} />
-              <Text fontSize="xl" fontWeight="bold" color="brand.600">
-                {properties.name}
-              </Text>
-              <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
-                {String(properties.buildingType || 'Unknown')}
-              </Badge>
-            </HStack>
-            <Text fontSize="sm" color="gray.600">
-              {(() => {
-                // Clean up address to prevent duplication
-                let displayAddress = 'Address not available';
+              <VStack align="start" spacing={1} flex={1}>
+                {/* Main title: Address */}
+                <HStack>
+                  <Text fontSize="xl" fontWeight="bold" color="brand.600">
+                    {addressInfo.cleanAddress || properties.name || 'Building Information'}
+                  </Text>
+                  <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
+                    {getSwissBuildingType(properties.buildingType)}
+                  </Badge>
+                </HStack>
                 
-                if (properties.address && properties.address !== 'Address lookup in progress...') {
-                  // Remove duplicate parts (e.g., "Kirchstrasse 72 72" -> "Kirchstrasse 72")
-                  const parts = properties.address.trim().split(' ');
-                  const cleanParts = [];
-                  let lastPart = '';
-                  
-                  for (const part of parts) {
-                    if (part !== lastPart) {
-                      cleanParts.push(part);
+                {/* Subtitle: City, Canton (if available) and EGID */}
+                <Text fontSize="sm" color="gray.600">
+                  {(() => {
+                    const locationParts = [];
+                    
+                    // Add city if available
+                    if (addressInfo.city && addressInfo.city !== 'Loading...') {
+                      locationParts.push(addressInfo.city);
                     }
-                    lastPart = part;
-                  }
-                  
-                  displayAddress = cleanParts.join(' ');
-                }
+                    
+                    // Add canton if available (with full name mapping)
+                    if (addressInfo.canton && addressInfo.canton !== 'Loading...') {
+                      const fullCantonName = getFullCantonName(addressInfo.canton);
+                      locationParts.push(fullCantonName);
+                    }
+                    
+                    const locationText = locationParts.length > 0 ? locationParts.join(', ') : '';
+                    const egidText = `EGID: ${properties.EGID}`;
+                    
+                    return locationText ? `${locationText} • ${egidText}` : egidText;
+                  })()}
+                </Text>
                 
-                return `${displayAddress} • EGID: ${properties.EGID}`;
-              })()}
-            </Text>
+              </VStack>
+            </HStack>
           </VStack>
         </ModalHeader>
-        <ModalCloseButton top={6} right={4} />
+        <ModalCloseButton />
         
         <ModalBody px={0}>
           <Tabs variant="enclosed" colorScheme="brand">
@@ -265,19 +285,19 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
 
             <TabPanels>
               <TabPanel>
-                <GeneralInfoTab building={building} />
+                <GeneralInfoTab building={cleanedBuilding} />
               </TabPanel>
               <TabPanel>
-                <EnvironmentTab building={building} />
+                <EnvironmentTab building={cleanedBuilding} />
               </TabPanel>
               <TabPanel>
-                <IndoorTab building={building} />
+                <IndoorTab building={cleanedBuilding} />
               </TabPanel>
               <TabPanel>
-                <EnergyTab building={building} />
+                <EnergyTab building={cleanedBuilding} />
               </TabPanel>
               <TabPanel>
-                <SolarTab building={building} />
+                <SolarTab building={cleanedBuilding} />
               </TabPanel>
             </TabPanels>
           </Tabs>

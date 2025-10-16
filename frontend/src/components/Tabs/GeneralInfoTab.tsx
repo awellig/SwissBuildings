@@ -11,19 +11,14 @@ import {
   Card,
   CardBody,
   Icon,
-  Alert,
-  AlertIcon,
-  Link,
 } from '@chakra-ui/react';
 import { 
   IconCalendar, 
   IconRuler, 
   IconStairs, 
-  IconMapPin,
-  IconSun,
-  IconBolt,
-  IconExternalLink
+  IconMapPin
 } from '@tabler/icons-react';
+import { getSwissBuildingType } from '../../utils/swissBuildingTypes';
 
 interface BuildingFeature {
   type: 'Feature';
@@ -126,7 +121,7 @@ export const GeneralInfoTab = ({ building }: GeneralInfoTabProps) => {
               </Box>
               <Box>
                 <Text fontWeight="medium" color="gray.700">Building Type</Text>
-                <Text color="gray.600">{properties.buildingType}</Text>
+                <Text color="gray.600">{getSwissBuildingType(properties.buildingType)}</Text>
               </Box>
               <Box>
                 <Text fontWeight="medium" color="gray.700">Address</Text>
@@ -146,124 +141,6 @@ export const GeneralInfoTab = ({ building }: GeneralInfoTabProps) => {
                 </Text>
               </Box>
             </SimpleGrid>
-          </VStack>
-        </CardBody>
-      </Card>
-
-      {/* Enhanced Solar Computation Methodology */}
-      <Card>
-        <CardBody>
-          <VStack spacing={4} align="stretch">
-            <HStack>
-              <Icon as={IconSun} boxSize={5} color="orange.500" />
-              <Text fontSize="lg" fontWeight="semibold" color="brand.600">
-                Enhanced Solar Computation
-              </Text>
-            </HStack>
-            
-            <Text fontSize="sm" color="gray.700" lineHeight="1.6">
-              Our solar potential estimates use a state-of-the-art hybrid approach combining multiple authoritative data sources 
-              for maximum accuracy and reliability.
-            </Text>
-
-            <VStack align="start" spacing={3}>
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.800" mb={1}>
-                  📡 NASA POWER Satellite Data
-                </Text>
-                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                  High-resolution solar irradiance measurements from NASA's satellite network, providing 4-year historical 
-                  averages (kW-hr/m²/day) for consistent and reliable estimates.
-                </Text>
-              </Box>
-
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.800" mb={1}>
-                  🇪🇺 PVGIS European Methodology
-                </Text>
-                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                  Official photovoltaic calculation methodology from the European Commission's Joint Research Centre, 
-                  used across Europe for solar potential assessments.
-                </Text>
-              </Box>
-
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.800" mb={1}>
-                  🇨🇭 Swiss Sonnendach Integration
-                </Text>
-                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                  When available, official roof suitability data from the Swiss Federal Office of Energy is combined 
-                  with satellite irradiance for the most accurate local estimates.
-                </Text>
-              </Box>
-
-              <Alert status="info" size="sm" borderRadius="md">
-                <AlertIcon boxSize={4} />
-                <Text fontSize="xs">
-                  This enhanced methodology provides 18-23% improved accuracy compared to traditional regional estimates.
-                </Text>
-              </Alert>
-            </VStack>
-          </VStack>
-        </CardBody>
-      </Card>
-
-      {/* NILM Technology */}
-      <Card>
-        <CardBody>
-          <VStack spacing={4} align="stretch">
-            <HStack>
-              <Icon as={IconBolt} boxSize={5} color="purple.500" />
-              <Text fontSize="lg" fontWeight="semibold" color="brand.600">
-                NILM Technology
-              </Text>
-            </HStack>
-            
-            <Text fontSize="sm" color="gray.700" lineHeight="1.6">
-              Non-Intrusive Load Monitoring (NILM) represents cutting-edge technology for detailed energy consumption analysis 
-              without requiring individual device meters.
-            </Text>
-
-            <VStack align="start" spacing={3}>
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.800" mb={1}>
-                  🔬 How NILM Works
-                </Text>
-                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                  NILM technology analyzes aggregated electrical consumption data using intelligent algorithms to identify 
-                  the unique electrical signatures of different appliances and equipment within a building.
-                </Text>
-              </Box>
-
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.800" mb={1}>
-                  ⚡ Advanced Signal Processing
-                </Text>
-                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                  High-frequency electrical signal measurements combined with AI algorithms can distinguish between 
-                  heating systems, lighting, ventilation, and other electrical loads from a single monitoring point.
-                </Text>
-              </Box>
-
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="gray.800" mb={1}>
-                  📊 Energy Disaggregation Benefits
-                </Text>
-                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                  Provides detailed end-use consumption breakdowns enabling targeted energy efficiency measures, 
-                  with typical savings of 15% without requiring building modifications.
-                </Text>
-              </Box>
-
-              <HStack spacing={2} mt={2}>
-                <Text fontSize="xs" color="gray.500">
-                  Learn more about NILM technology:
-                </Text>
-                <Link href="https://www.smart-impulse.com/en/nilm-technology/" isExternal fontSize="xs" color="blue.500">
-                  Smart Impulse NILM <Icon as={IconExternalLink} boxSize={3} />
-                </Link>
-              </HStack>
-            </VStack>
           </VStack>
         </CardBody>
       </Card>

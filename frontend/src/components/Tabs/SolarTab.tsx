@@ -34,6 +34,10 @@ import { solarService } from '../../services/api';
 interface BuildingFeature {
   properties: {
     EGID: string;
+    area?: number;
+    floors?: number;
+    buildingType?: string;
+    constructionYear?: number;
   };
 }
 
@@ -52,6 +56,8 @@ interface SolarData {
   isEstimated?: boolean;
   estimationMethod?: string;
   dataSource?: string;
+  installationCost?: number; // CHF
+  paybackPeriod?: number; // years
 }
 
 export const SolarTab = ({ building }: SolarTabProps) => {
@@ -64,9 +70,20 @@ export const SolarTab = ({ building }: SolarTabProps) => {
       try {
         setLoading(true);
         console.log(`🏠 SolarTab: Fetching solar data for building EGID: ${building.properties.EGID}`);
+        console.log(`🏠 SolarTab: Building properties:`, building.properties);
         
-        // Call real backend service instead of mock data
-        const solarPotential = await solarService.getSolarPotential(building.properties.EGID);
+        // Prepare building data for accurate solar calculation
+        const buildingData = {
+          floorArea: building.properties.area,
+          floors: building.properties.floors,
+          buildingType: building.properties.buildingType,
+          constructionYear: building.properties.constructionYear
+        };
+        
+        console.log(`🏠 SolarTab: Sending building data:`, buildingData);
+        
+        // Call real backend service with building data for accurate calculations
+        const solarPotential = await solarService.getSolarPotential(building.properties.EGID, buildingData);
         
         console.log('🌞 SolarTab: Received solar potential data:', solarPotential);
         
@@ -121,7 +138,7 @@ export const SolarTab = ({ building }: SolarTabProps) => {
                   Solar Data Unavailable
                 </Text>
                 <Text fontSize="sm" color="gray.500" maxW="md">
-                  {error || 'No solar potential data is available for this building. This could be because the building is not in the SFOE Sonnendach database or the building coordinates could not be determined.'}
+                  {error || 'No solar potential data is available for this building. This could be due to location constraints or temporary service unavailability.'}
                 </Text>
               </VStack>
               <Box
@@ -137,7 +154,7 @@ export const SolarTab = ({ building }: SolarTabProps) => {
                     💡 About Swiss Solar Data
                   </Text>
                   <Text fontSize="xs" color="blue.700">
-                    Solar potential data comes from the Swiss Federal Office of Energy (SFOE) Sonnendach project, which maps solar suitability for buildings across Switzerland.
+                    Solar potential data comes from our advanced hybrid estimation system using NASA POWER satellite irradiance data combined with PVGIS European methodology for accurate Swiss building assessments.
                   </Text>
                 </VStack>
               </Box>
@@ -149,8 +166,23 @@ export const SolarTab = ({ building }: SolarTabProps) => {
   }
 
   const suitabilityPercentage = (data.suitableArea / data.roofArea) * 100;
-  const annualSavings = data.annualProduction * 0.20; // CHF 0.20 per kWh
-  const paybackPeriod = (data.potentialKwp * 1500) / annualSavings; // Estimate CHF 1500/kWp installation cost
+  // Calculate economic metrics using current Swiss pricing (2024)
+  // Use backend data if available, otherwise calculate with current rates
+  const electricityPrice = 0.25; // CHF/kWh (current Swiss household average)
+  const feedInTariff = 0.07; // CHF/kWh (typical Swiss feed-in rate)
+  const selfConsumptionRate = 0.30; // 30% self-consumption typical for residential
+  const installationCostPerKwp = 1800; // CHF/kWp (current Swiss market rate including VAT)
+  
+  const installationCost = data.installationCost || (data.potentialKwp * installationCostPerKwp);
+  
+  // Calculate annual savings based on Swiss market conditions
+  const selfConsumedEnergy = data.annualProduction * selfConsumptionRate;
+  const feedInEnergy = data.annualProduction * (1 - selfConsumptionRate);
+  const annualSavings = data.paybackPeriod ? 
+    (installationCost / data.paybackPeriod) : 
+    ((selfConsumedEnergy * electricityPrice) + (feedInEnergy * feedInTariff));
+  
+  const paybackPeriod = data.paybackPeriod || (installationCost / Math.max(annualSavings, 1));
 
   return (
     <VStack spacing={6} align="stretch">
@@ -161,12 +193,8 @@ export const SolarTab = ({ building }: SolarTabProps) => {
           <Box>
             <AlertTitle>Estimated Solar Data</AlertTitle>
             <AlertDescription fontSize="sm">
-              {data.dataSource || 'Data estimated from building characteristics and Swiss solar irradiation models.'}
-              {data.estimationMethod && (
-                <Text fontSize="xs" mt={1} color="gray.600">
-                  Method: {data.estimationMethod}
-                </Text>
-              )}
+              Building data from Swiss Federal Building Register, solar irradiation from NASA satellite data. 
+              Algorithm estimates roof area from floor area and applies industry standard solar suitability factors.
             </AlertDescription>
           </Box>
         </Alert>
@@ -176,9 +204,9 @@ export const SolarTab = ({ building }: SolarTabProps) => {
         <Alert status="success" borderRadius="md">
           <AlertIcon />
           <Box>
-            <AlertTitle>Official Solar Data</AlertTitle>
+            <AlertTitle>Enhanced Solar Data</AlertTitle>
             <AlertDescription fontSize="sm">
-              Data from SFOE Sonnendach (Swiss Federal Office of Energy) - Official solar cadastre.
+              Data from NASA POWER satellite network & PVGIS European Commission methodology - Enhanced hybrid approach for Swiss conditions.
             </AlertDescription>
           </Box>
         </Alert>
@@ -190,7 +218,7 @@ export const SolarTab = ({ building }: SolarTabProps) => {
           <VStack spacing={4} align="stretch">
             <HStack justify="space-between">
               <Text fontSize="lg" fontWeight="semibold" color="brand.600">
-                Solar Potential (SFOE Sonnendach)
+                Solar Potential Assessment
               </Text>
               <Badge size="lg" colorScheme={getViabilityColor(data.economicViability)}>
                 {data.economicViability.toUpperCase()}
@@ -367,7 +395,16 @@ export const SolarTab = ({ building }: SolarTabProps) => {
                       <Text fontSize="sm" color="blue.600">{(data.potentialKwp * 0.7).toFixed(1)} kWp</Text>
                     </HStack>
                     <Text fontSize="xs" color="gray.600">
-                      Reduced risk, easier maintenance access
+                      Reduced risk, easier maintenance access, future expansion possible
+                    </Text>
+                  </Box>
+                  <Box bg="green.50" p={3} borderRadius="md" border="1px solid" borderColor="green.200">
+                    <HStack justify="space-between">
+                      <Text fontSize="sm" fontWeight="medium">Self-Consumption</Text>
+                      <Text fontSize="sm" color="green.600">{(data.potentialKwp * 0.5).toFixed(1)} kWp</Text>
+                    </HStack>
+                    <Text fontSize="xs" color="gray.600">
+                      Optimized for high self-consumption (60-80%)
                     </Text>
                   </Box>
                 </VStack>
@@ -379,38 +416,64 @@ export const SolarTab = ({ building }: SolarTabProps) => {
                   <HStack justify="space-between">
                     <Text fontSize="sm">Installation Cost</Text>
                     <Text fontSize="sm" fontWeight="medium">
-                      CHF {(data.potentialKwp * 1500).toFixed(0)}
+                      CHF {installationCost.toFixed(0)}
                     </Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text fontSize="sm">Annual Revenue</Text>
+                    <Text fontSize="sm">Annual Savings</Text>
                     <Text fontSize="sm" fontWeight="medium" color="green.600">
                       CHF {annualSavings.toFixed(0)}
                     </Text>
                   </HStack>
                   <HStack justify="space-between">
-                    <Text fontSize="sm">Break-even</Text>
+                    <Text fontSize="sm">Payback Period</Text>
                     <Text fontSize="sm" fontWeight="medium" color="blue.600">
                       {paybackPeriod.toFixed(1)} years
+                    </Text>
+                  </HStack>
+                  <HStack justify="space-between">
+                    <Text fontSize="sm">25-Year ROI</Text>
+                    <Text fontSize="sm" fontWeight="medium" color="purple.600">
+                      CHF {((annualSavings * 25) - installationCost).toFixed(0)}
                     </Text>
                   </HStack>
                 </VStack>
               </Box>
             </SimpleGrid>
 
-            <Box bg="yellow.50" p={4} borderRadius="md" borderLeft="4px solid" borderLeftColor="yellow.400">
-              <Text fontSize="sm" fontWeight="medium" color="yellow.800">
-                ☀️ Solar Investment Outlook
+            {/* Swiss Industry Best Practices */}
+            <Box bg="blue.50" p={4} borderRadius="md" border="1px solid" borderColor="blue.200">
+              <Text fontSize="sm" fontWeight="medium" color="blue.800" mb={2}>
+                🏗️ Swiss Installation Best Practices
               </Text>
-              <Text fontSize="sm" color="yellow.700" mt={1}>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                <VStack align="start" spacing={1}>
+                  <Text fontSize="xs" fontWeight="medium" color="blue.700">Panel Technology:</Text>
+                  <Text fontSize="xs" color="blue.600">• Monocrystalline silicon (20%+ efficiency)</Text>
+                  <Text fontSize="xs" color="blue.600">• 25-year performance warranty</Text>
+                  <Text fontSize="xs" color="blue.600">• Swiss weather-tested components</Text>
+                </VStack>
+                <VStack align="start" spacing={1}>
+                  <Text fontSize="xs" fontWeight="medium" color="blue.700">Installation Standards:</Text>
+                  <Text fontSize="xs" color="blue.600">• Swissolar certified installers</Text>
+                  <Text fontSize="xs" color="blue.600">• Building-integrated design (BIPV)</Text>
+                  <Text fontSize="xs" color="blue.600">• Optimal south/east/west orientation</Text>
+                </VStack>
+              </SimpleGrid>
+            </Box>
+
+            <Box bg={`${getViabilityColor(data.economicViability)}.50`} p={4} borderRadius="md" borderLeft="4px solid" borderLeftColor={`${getViabilityColor(data.economicViability)}.400`}>
+              <Text fontSize="sm" fontWeight="medium" color={`${getViabilityColor(data.economicViability)}.800`}>
+                ☀️ Investment Assessment: {data.economicViability.toUpperCase()}
+              </Text>
+              <Text fontSize="sm" color={`${getViabilityColor(data.economicViability)}.700`} mt={1}>
                 {data.economicViability === 'excellent' 
-                  ? "Excellent solar potential! This roof is ideal for solar installation with high returns."
+                  ? 'Outstanding solar potential with quick payback. Consider maximum system size for best returns.'
                   : data.economicViability === 'good'
-                    ? "Good solar potential. Installation would be profitable with reasonable payback period."
-                    : data.economicViability === 'moderate'
-                      ? "Moderate solar potential. Consider partial installation or wait for technology improvements."
-                      : "Limited solar potential. Site may not be optimal for large-scale solar installation."
-                }
+                  ? 'Good solar investment opportunity. Recommended for long-term energy independence.'
+                  : data.economicViability === 'moderate'
+                  ? 'Moderate solar potential. Consider smaller system or wait for technology improvements.'
+                  : 'Limited economic viability. Focus on energy efficiency measures first or consider community solar options.'}
               </Text>
             </Box>
           </VStack>

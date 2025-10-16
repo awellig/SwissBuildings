@@ -85,9 +85,16 @@ export const energyService = {
 
 // Solar API
 export const solarService = {
-  getSolarPotential: async (egid: string) => {
-    const response = await apiClient.get(`/solar/potential/${egid}`);
-    return response.data;
+  getSolarPotential: async (egid: string, buildingData?: any) => {
+    if (buildingData) {
+      // POST request with building data
+      const response = await apiClient.post(`/solar/potential/${egid}`, buildingData);
+      return response.data;
+    } else {
+      // GET request without building data (fallback)
+      const response = await apiClient.get(`/solar/potential/${egid}`);
+      return response.data;
+    }
   }
 };
 

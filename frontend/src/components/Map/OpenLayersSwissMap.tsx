@@ -54,7 +54,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
   const layersRef = useRef<globalThis.Map<string, TileLayer<XYZ>>>(new globalThis.Map());
   const vectorLayersRef = useRef<globalThis.Map<string, VectorLayer<VectorSource>>>(new globalThis.Map());
   const [isLoaded, setIsLoaded] = useState(false);
-  const [selectedBackground, setSelectedBackground] = useState('color');
+  const [selectedBackground, setSelectedBackground] = useState('aerial');
   const [overlayLayers, setOverlayLayers] = useState({
     buildings: true,
     names: false,
@@ -194,6 +194,10 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
 
   // Available background layers
   const backgroundLayers = {
+    aerial: {
+      name: 'Aerial Imagery',
+      url: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg'
+    },
     color: {
       name: 'Color Map',
       url: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg'
@@ -201,14 +205,6 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
     gray: {
       name: 'Grayscale Map', 
       url: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg'
-    },
-    aerial: {
-      name: 'Aerial Imagery',
-      url: 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg'
-    },
-    none: {
-      name: 'No Background',
-      url: ''
     }
   };
 
@@ -239,7 +235,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
       // Create initial background layer (color map)
       const backgroundLayer = new TileLayer({
         source: new XYZ({
-          url: backgroundLayers.color.url,
+          url: backgroundLayers.aerial.url,
           maxZoom: 18,
         }),
       });
@@ -535,6 +531,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
                 buildingType: String(attrs.gklas || attrs.gkode || attrs.building_class || attrs.category || 'Building'),
                 constructionYear: Number(attrs.gbauj || attrs.construction_year) || new Date().getFullYear(),
                 floors: Number(attrs.gastw || attrs.floors || attrs.number_of_floors) || 1,
+                // Note: garea is total floor area (sum of all floors) according to Swiss GWR standards
                 area: Number(attrs.garea || attrs.floor_area || attrs.area) || 100,
                 municipality: String(attrs.ggdenr || attrs.plzname || attrs.municipality || ''),
                 zipCode: String(attrs.plz4 || attrs.postcode || attrs.zip || ''),
@@ -551,7 +548,9 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
               }
             };
 
+            console.log('Raw building attributes from API:', attrs);
             console.log('Processed building data:', buildingData);
+            console.log('Area interpretation: garea=' + attrs.garea + ' (total floor area), floors=' + attrs.gastw + ', ground floor area would be ~' + (attrs.garea / (attrs.gastw || 1)) + 'm²');
 
             onBuildingClick(buildingData);
             
@@ -617,15 +616,11 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
     const backgroundLayer = layersRef.current.get('background');
     
     if (map && backgroundLayer) {
-      if (selectedBackground === 'none') {
-        backgroundLayer.setVisible(false);
-      } else {
-        backgroundLayer.setVisible(true);
-        backgroundLayer.setSource(new XYZ({
-          url: backgroundLayers[selectedBackground as keyof typeof backgroundLayers].url,
-          maxZoom: 18,
-        }));
-      }
+      backgroundLayer.setVisible(true);
+      backgroundLayer.setSource(new XYZ({
+        url: backgroundLayers[selectedBackground as keyof typeof backgroundLayers].url,
+        maxZoom: 18,
+      }));
     }
   }, [selectedBackground, backgroundLayers]);
 

@@ -11,7 +11,11 @@ export class SolarController {
   getSolarPotential = async (req: Request, res: Response) => {
     try {
       const { egid } = req.params;
-      const potential = await this.solarService.getSolarPotential(egid);
+      const buildingData = req.body; // Optional building data from frontend
+      
+      console.log(`☀️ Solar Request for EGID ${egid} with building data:`, buildingData);
+      
+      const potential = await this.solarService.getSolarPotential(egid, buildingData);
       res.json(potential);
     } catch (error) {
       console.error('Error getting solar potential:', error);
