@@ -167,22 +167,10 @@ export const SolarTab = ({ building }: SolarTabProps) => {
 
   const suitabilityPercentage = (data.suitableArea / data.roofArea) * 100;
   // Calculate economic metrics using current Swiss pricing (2024)
-  // Use backend data if available, otherwise calculate with current rates
-  const electricityPrice = 0.25; // CHF/kWh (current Swiss household average)
-  const feedInTariff = 0.07; // CHF/kWh (typical Swiss feed-in rate)
-  const selfConsumptionRate = 0.30; // 30% self-consumption typical for residential
-  const installationCostPerKwp = 1800; // CHF/kWp (current Swiss market rate including VAT)
-  
-  const installationCost = data.installationCost || (data.potentialKwp * installationCostPerKwp);
-  
-  // Calculate annual savings based on Swiss market conditions
-  const selfConsumedEnergy = data.annualProduction * selfConsumptionRate;
-  const feedInEnergy = data.annualProduction * (1 - selfConsumptionRate);
-  const annualSavings = data.paybackPeriod ? 
-    (installationCost / data.paybackPeriod) : 
-    ((selfConsumedEnergy * electricityPrice) + (feedInEnergy * feedInTariff));
-  
-  const paybackPeriod = data.paybackPeriod || (installationCost / Math.max(annualSavings, 1));
+  // Use backend economic calculations (backend already handles Swiss market rates and payback)
+  const installationCost = data.installationCost || 0;
+  const paybackPeriod = data.paybackPeriod || 0;
+  const annualSavings = paybackPeriod > 0 ? installationCost / paybackPeriod : 0;
 
   return (
     <VStack spacing={6} align="stretch">
@@ -193,7 +181,7 @@ export const SolarTab = ({ building }: SolarTabProps) => {
           <Box>
             <AlertTitle>Estimated Solar Data</AlertTitle>
             <AlertDescription fontSize="sm">
-              Building data from Swiss Federal Building Register, solar irradiation from NASA satellite data. 
+              Building data from Swiss Federal Building Register, solar irradiation from NASA POWER satellite data. 
               Algorithm estimates roof area from floor area and applies industry standard solar suitability factors.
             </AlertDescription>
           </Box>

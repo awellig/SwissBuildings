@@ -167,22 +167,22 @@ const BuildingExplorer = () => {
         borderBottom="1px solid"
         borderColor="gray.200"
         px={6}
-        py={3}
+        py={2}
         shadow="sm"
       >
         <HStack justify="space-between" align="center">
-          <HStack spacing={4}>
+          <HStack spacing={3}>
             <Image
               src="/capgeminiLogo.png"
               alt="Capgemini Logo"
-              h="40px"
+              h="28px"
               objectFit="contain"
             />
             <VStack align="start" spacing={0}>
-              <Text fontSize="xl" fontWeight="bold" color="brand.600">
+              <Text fontSize="lg" fontWeight="bold" color="black">
                 Swiss Public Building Intelligence
               </Text>
-              <Text fontSize="sm" color="gray.600">
+              <Text fontSize="xs" color="gray.600">
                 Powered by{' '}
                 <a 
                   href="https://www.bfs.admin.ch/bfs/en/home/services/ogd/portal.html" 
@@ -213,7 +213,7 @@ const BuildingExplorer = () => {
       {/* Map Container */}
       <Box 
         position="absolute" 
-        top="70px" 
+        top="60px" 
         left={0} 
         right={0} 
         bottom={0}
@@ -448,6 +448,9 @@ const BuildingExplorer = () => {
         <HStack justify="space-between" fontSize="xs" color="gray.600">
           <Text>
             © 2025 Capgemini - Swiss Buildings Data Visualization
+          </Text>
+          <Text fontSize="xs" color="gray.600">
+            Swiss Federal Building Register • NABEL • MeteoSwiss • NASA POWER • PVGIS
           </Text>
         </HStack>
       </Box>

@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiss Buildings Explorer - Algorithm Documentation</title>
+    <link rel="icon" type="image/png" href="capgemini_logo.png">
+    <style>
+        :root {
+            --capgemini-blue: #0070AD;
+            --capgemini-light-blue: #E6F3FF;
+            --capgemini-dark-blue: #004A73;
+            --capgemini-accent: #00B2A9;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --background: #FFFFFF;
+            --surface: #F8F9FA;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--capgemini-blue), var(--capgemini-dark-blue));
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 20px rgba(0, 112, 173, 0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: white;
+            padding: 8px;
+        }
+
+        .header-text h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-text p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .nav {
+            background-color: var(--surface);
+            padding: 1rem 0;
+            border-bottom: 1px solid #E5E5E5;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-items {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-item {
+            color: var(--capgemini-blue);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background-color: var(--capgemini-light-blue);
+            transform: translateY(-2px);
+        }
+
+        .content {
+            padding: 3rem 0;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid var(--capgemini-blue);
+        }
+
+        .section h2 {
+            color: var(--capgemini-blue);
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section h3 {
+            color: var(--capgemini-dark-blue);
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem 0;
+            border-bottom: 2px solid var(--capgemini-light-blue);
+            padding-bottom: 0.5rem;
+        }
+
+        .section h4 {
+            color: var(--capgemini-blue);
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.8rem 0;
+        }
+
+        .algorithm-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid var(--capgemini-accent);
+        }
+
+        .data-source {
+            background: linear-gradient(45deg, var(--capgemini-light-blue), #F0F8FF);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border: 1px solid var(--capgemini-blue);
+        }
+
+        .parameter-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .parameter-table th {
+            background: var(--capgemini-blue);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .parameter-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #E5E5E5;
+        }
+
+        .parameter-table tr:hover {
+            background-color: var(--capgemini-light-blue);
+        }
+
+        .code-block {
+            background: #1E1E1E;
+            color: #D4D4D4;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-left: 4px solid var(--capgemini-accent);
+        }
+
+        .formula {
+            background: var(--capgemini-light-blue);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1rem;
+            text-align: center;
+            margin: 1rem 0;
+            border: 2px solid var(--capgemini-blue);
+        }
+
+        .reference {
+            background: #F8F9FA;
+            padding: 1rem;
+            border-left: 4px solid var(--capgemini-accent);
+            margin: 1rem 0;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            background: var(--capgemini-blue);
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .footer {
+            background: var(--capgemini-dark-blue);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted var(--capgemini-blue);
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--capgemini-dark-blue);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            font-size: 0.8rem;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .nav-items {
+                justify-content: center;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            .section {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <img src="capgemini_logo.png" alt="Capgemini Logo" class="logo">
+                <div class="header-text">
+                    <h1>Swiss Buildings Explorer</h1>
+                    <p>Algorithm Documentation & Technical Specifications</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-items">
+                <a href="#overview" class="nav-item">Overview</a>
+                <a href="#solar-algorithms" class="nav-item">Solar Algorithms</a>
+                <a href="#building-data" class="nav-item">Building Data</a>
+                <a href="#environment" class="nav-item">Environment</a>
+                <a href="#energy" class="nav-item">Energy</a>
+                <a href="#data-sources" class="nav-item">Data Sources</a>
+                <a href="#parameters" class="nav-item">Parameters</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <div class="container">
+            
+            <!-- Overview Section -->
+            <section id="overview" class="section">
+                <h2><span class="icon"></span>System Overview</h2>
+                <p>The Swiss Buildings Explorer implements a comprehensive suite of algorithms for analyzing building characteristics, solar potential, environmental conditions, and energy consumption across Switzerland. The system leverages multiple authoritative data sources and implements industry-standard calculations to provide accurate, actionable insights.</p>
+                
+                <h3>Architecture Overview</h3>
+                <p>The backend services are organized into specialized modules, each handling specific aspects of building analysis. <strong>All recommendation logic and economic calculations are performed in the backend to ensure consistency, accuracy, and prevent client-side manipulation.</strong></p>
+                <ul style="margin: 1rem 0; padding-left: 2rem;">
+                    <li><strong>Enhanced Solar Estimation Service:</strong> NASA POWER + PVGIS-based solar potential calculations</li>
+                    <li><strong>Building Data Service:</strong> Swiss Federal Building Registry integration</li>
+                    <li><strong>Environment Service:</strong> Air quality and weather data from NABEL/MeteoSwiss</li>
+                    <li><strong>Energy Service:</strong> Energy consumption analysis using NILM methodologies</li>
+                    <li><strong>Solar Service:</strong> Integration layer combining multiple solar data sources</li>
+                </ul>
+
+                <h3>Data Flow Architecture</h3>
+                <div class="algorithm-card">
+                    <h4>Backend Processing (Authoritative)</h4>
+                    <ul style="margin: 1rem 0; padding-left: 2rem;">
+                        <li>NASA POWER satellite data retrieval and processing</li>
+                        <li>Swiss Building Registry data extraction and validation</li>
+                        <li>Economic viability calculations with Swiss market rates</li>
+                        <li>Payback period and ROI analysis</li>
+                        <li>Recommendation classification (excellent/good/moderate/poor)</li>
+                    </ul>
+                    
+                    <h4>Frontend Display (Presentation Only)</h4>
+                    <ul style="margin: 1rem 0; padding-left: 2rem;">
+                        <li>Data visualization and user interface</li>
+                        <li>No economic calculations or recommendations</li>
+                        <li>Direct display of backend-calculated values</li>
+                        <li>User interaction and map integration</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Solar Algorithms Section -->
+            <section id="solar-algorithms" class="section">
+                <h2><span class="icon"></span>Solar Estimation Algorithms</h2>
+                
+                <div class="algorithm-card">
+                    <h3>Enhanced Swiss Solar Estimation</h3>
+                    <p><strong>Service:</strong> <code>EnhancedSwissSolarEstimationService</code></p>
+                    <p><strong>Primary Method:</strong> Multi-source satellite and ground-based data fusion</p>
+                    
+                    <h4>Algorithm Overview</h4>
+                    <p>The enhanced solar estimation algorithm uses NASA POWER satellite data as the primary irradiation source, combined with Swiss building characteristics and PVGIS methodologies to provide highly accurate solar potential calculations.</p>
+                    
+                    <h4>Calculation Steps</h4>
+                    <ol style="margin: 1rem 0; padding-left: 2rem;">
+                        <li><strong>NASA POWER Data Retrieval:</strong> 4-year satellite averages (2020-2023) for precise coordinates</li>
+                        <li><strong>PVGIS Validation:</strong> EU Photovoltaic Geographical Information System cross-validation</li>
+                        <li><strong>Swiss Building Analysis:</strong> Federal Building Registry roof characteristics</li>
+                        <li><strong>Optimized Installation Design:</strong> Panel placement and efficiency calculations</li>
+                        <li><strong>Economic Assessment:</strong> Swiss market-specific financial modeling with 2024 rates</li>
+                    </ol>
+
+                    <h4>Roof Area Calculation</h4>
+                    <div class="formula">
+                        Ground Floor Area = Total Floor Area ÷ Number of Floors<br>
+                        Roof Area = Ground Floor Area × Roof Multiplier<br>
+                        Suitable Area = Roof Area × Suitability Factor
+                    </div>
+                    
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Building Type</th>
+                                <th>Roof Multiplier</th>
+                                <th>Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Residential (1010, 1020)</td>
+                                <td>0.90</td>
+                                <td>Simple roof structures, minimal complications</td>
+                            </tr>
+                            <tr>
+                                <td>Industrial/Warehouse (1262, 1263)</td>
+                                <td>0.95</td>
+                                <td>Large, flat roofs ideal for solar installations</td>
+                            </tr>
+                            <tr>
+                                <td>Educational (1311, 1312)</td>
+                                <td>0.80</td>
+                                <td>Complex roof structures, multiple sections</td>
+                            </tr>
+                            <tr>
+                                <td>Default</td>
+                                <td>0.85</td>
+                                <td>Standard Swiss building average</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Suitability Factor Calculation</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Roof Area</th>
+                                <th>Suitability Factor</th>
+                                <th>Justification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>≥ 200m²</td>
+                                <td>0.70</td>
+                                <td>Large roofs, minimal edge effects</td>
+                            </tr>
+                            <tr>
+                                <td>100-199m²</td>
+                                <td>0.65</td>
+                                <td>Medium roofs, good utilization</td>
+                            </tr>
+                            <tr>
+                                <td>&lt; 50m²</td>
+                                <td>0.55</td>
+                                <td>Small roofs, significant edge effects</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Panel Efficiency</h4>
+                    <p><strong>Modern Panel Efficiency:</strong> 220W/m² (2024 Swiss market standard)</p>
+                    <div class="formula">
+                        Potential Power (kWp) = Suitable Area (m²) × 0.22 (kW/m²)
+                    </div>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>NASA POWER Solar Irradiation Model</h3>
+                    <p>Primary solar irradiation data source using NASA POWER satellite measurements for precise location-specific calculations.</p>
+                    
+                    <h4>Data Source Characteristics</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Details</th>
+                                <th>Validation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Spatial Resolution</td>
+                                <td>0.5° × 0.625°</td>
+                                <td>Global grid, ~50km resolution</td>
+                                <td>Validated against ground stations</td>
+                            </tr>
+                            <tr>
+                                <td>Temporal Coverage</td>
+                                <td>2020-2023</td>
+                                <td>4-year average for reliability</td>
+                                <td>Accounts for yearly variations</td>
+                            </tr>
+                            <tr>
+                                <td>Data Parameter</td>
+                                <td>ALLSKY_SFC_SW_DWN</td>
+                                <td>All Sky Surface Shortwave Downward Irradiance</td>
+                                <td>Includes cloud effects and atmospheric conditions</td>
+                            </tr>
+                            <tr>
+                                <td>Swiss Irradiation Range</td>
+                                <td>900-1400 kWh/m²/year</td>
+                                <td>Location-dependent satellite measurements</td>
+                                <td>Consistent with MeteoSwiss ground data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Algorithm Implementation</h4>
+                    <div class="formula">
+                        Monthly Average = Σ(Daily Irradiance × Days in Month) for 2020-2023<br>
+                        Annual Irradiation = Σ(Monthly Averages × Days per Month)
+                    </div>
+
+                    <div class="reference">
+                        <strong>Advantages over Regional Estimates:</strong> NASA POWER provides actual measured satellite data for each specific location rather than interpolated regional values, ensuring accuracy for precise coordinates.
+                    </div>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>Swiss Regional Irradiation Reference</h3>
+                    <p><em>Note: These values are for reference only. The system now uses actual NASA satellite data for each location.</em></p>
+                    
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Region</th>
+                                <th>Coordinates</th>
+                                <th>Irradiation (kWh/m²/year)</th>
+                                <th>Classification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Valais</td>
+                                <td>7.0-8.5°E, 45.8-46.6°N</td>
+                                <td>1350</td>
+                                <td>Excellent</td>
+                            </tr>
+                            <tr>
+                                <td>Ticino</td>
+                                <td>8.5-9.5°E, 45.8-46.5°N</td>
+                                <td>1300</td>
+                                <td>Very Good</td>
+                            </tr>
+                            <tr>
+                                <td>Graubünden</td>
+                                <td>9.0-10.6°E, 46.0-47.1°N</td>
+                                <td>1250</td>
+                                <td>Good (High Altitude)</td>
+                            </tr>
+                            <tr>
+                                <td>Central Switzerland</td>
+                                <td>6.0-9.0°E, 46.5-47.8°N</td>
+                                <td>1200</td>
+                                <td>Good</td>
+                            </tr>
+                            <tr>
+                                <td>Northern Switzerland</td>
+                                <td>7.0-9.0°E, 47.2-47.8°N</td>
+                                <td>1150</td>
+                                <td>Moderate to Good</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="reference">
+                        <strong>Reference:</strong> Values based on Swiss Solar Atlas (BFE), MeteoSwiss climate data, and Swissolar industry standards.
+                    </div>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>Economic Viability Assessment</h3>
+                    <p>Swiss market-specific economic modeling using current energy prices and regulations. <strong>All calculations performed in backend services to ensure consistency and accuracy.</strong></p>
+                    
+                    <h4>Key Parameters (2024 Swiss Market)</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Source/Justification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Electricity Price</td>
+                                <td>0.28 CHF/kWh</td>
+                                <td>Average Swiss household rate including taxes (ElCom 2024)</td>
+                            </tr>
+                            <tr>
+                                <td>Feed-in Tariff</td>
+                                <td>0.12 CHF/kWh</td>
+                                <td>Updated Swiss feed-in rates 2024 (Swissolar)</td>
+                            </tr>
+                            <tr>
+                                <td>Self-Consumption Rate</td>
+                                <td>65%</td>
+                                <td>Modern energy management systems with battery potential</td>
+                            </tr>
+                            <tr>
+                                <td>Tax Benefit</td>
+                                <td>15%</td>
+                                <td>Swiss solar installation tax deduction</td>
+                            </tr>
+                            <tr>
+                                <td>Installation Cost (Small)</td>
+                                <td>1900 CHF/kWp</td>
+                                <td>≤10 kWp systems</td>
+                            </tr>
+                            <tr>
+                                <td>Installation Cost (Medium)</td>
+                                <td>1700 CHF/kWp</td>
+                                <td>10-30 kWp systems</td>
+                            </tr>
+                            <tr>
+                                <td>Installation Cost (Large)</td>
+                                <td>1500 CHF/kWp</td>
+                                <td>&gt;30 kWp systems (economies of scale)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Financial Calculation</h4>
+                    <div class="formula">
+                        Annual Savings = (Self-Consumed Energy × Electricity Price) + (Fed-in Energy × Feed-in Tariff)<br>
+                        Effective Cost = Installation Cost - (Installation Cost × Tax Benefit)<br>
+                        Payback Period = Effective Cost ÷ Annual Savings
+                    </div>
+
+                    <h4>Viability Classification (Swissolar Standards)</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Payback Period</th>
+                                <th>Classification</th>
+                                <th>Investment Recommendation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>≤ 6 years</td>
+                                <td>Excellent</td>
+                                <td>Outstanding ROI, highly recommended</td>
+                            </tr>
+                            <tr>
+                                <td>6-10 years</td>
+                                <td>Good</td>
+                                <td>Very attractive investment</td>
+                            </tr>
+                            <tr>
+                                <td>10-15 years</td>
+                                <td>Moderate</td>
+                                <td>Acceptable, consider other factors</td>
+                            </tr>
+                            <tr>
+                                <td>&gt; 15 years</td>
+                                <td>Poor</td>
+                                <td>Not recommended financially</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Building Data Section -->
+            <section id="building-data" class="section">
+                <h2><span class="icon"></span>Building Data Algorithms</h2>
+                
+                <div class="algorithm-card">
+                    <h3>Swiss Building Registry Integration</h3>
+                    <p><strong>Service:</strong> <code>SwissBuildingDataService</code></p>
+                    <p>Comprehensive building data extraction from the Swiss Federal Building and Housing Register (GWR).</p>
+                    
+                    <h4>Data Extraction Process</h4>
+                    <ol style="margin: 1rem 0; padding-left: 2rem;">
+                        <li><strong>Coordinate Resolution:</strong> EGID to Swiss LV95 coordinates</li>
+                        <li><strong>Attribute Parsing:</strong> Building characteristics extraction</li>
+                        <li><strong>Data Validation:</strong> Range checking and quality assessment</li>
+                        <li><strong>Standardization:</strong> Unit conversion and normalization</li>
+                    </ol>
+
+                    <h4>Key Building Attributes</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Attribute</th>
+                                <th>GWR Field</th>
+                                <th>Validation Range</th>
+                                <th>Default Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Floor Area</td>
+                                <td>garea</td>
+                                <td>10-50,000 m²</td>
+                                <td>150 m²</td>
+                            </tr>
+                            <tr>
+                                <td>Number of Floors</td>
+                                <td>gastw</td>
+                                <td>1-50 floors</td>
+                                <td>2 floors</td>
+                            </tr>
+                            <tr>
+                                <td>Construction Year</td>
+                                <td>gbauj</td>
+                                <td>1800-2025</td>
+                                <td>Current year</td>
+                            </tr>
+                            <tr>
+                                <td>Building Type</td>
+                                <td>gklas</td>
+                                <td>Swiss GKLAS codes</td>
+                                <td>'Building'</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="reference">
+                        <strong>Note:</strong> garea represents total floor area (sum of all floors) according to Swiss GWR standards, not individual floor area.
+                    </div>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>Building Type Classification</h3>
+                    <p>Swiss GKLAS (Gebäudekategorien) classification system mapping to human-readable descriptions.</p>
+                    
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>GKLAS Code</th>
+                                <th>Description</th>
+                                <th>Solar Suitability</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1010</td>
+                                <td>Single family house</td>
+                                <td>Excellent</td>
+                            </tr>
+                            <tr>
+                                <td>1020</td>
+                                <td>Multi-family house</td>
+                                <td>Very Good</td>
+                            </tr>
+                            <tr>
+                                <td>1030</td>
+                                <td>Apartment building</td>
+                                <td>Good</td>
+                            </tr>
+                            <tr>
+                                <td>1211</td>
+                                <td>Office building</td>
+                                <td>Good</td>
+                            </tr>
+                            <tr>
+                                <td>1262</td>
+                                <td>Industrial building</td>
+                                <td>Excellent</td>
+                            </tr>
+                            <tr>
+                                <td>1311</td>
+                                <td>School building</td>
+                                <td>Moderate</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Environment Section -->
+            <section id="environment" class="section">
+                <h2><span class="icon"></span>Environmental Data Algorithms</h2>
+                
+                <div class="algorithm-card">
+                    <h3>Air Quality Analysis</h3>
+                    <p><strong>Service:</strong> <code>EnvironmentService</code></p>
+                    <p>Real-time air quality assessment using NABEL (National Air Pollution Monitoring Network) data.</p>
+                    
+                    <h4>Pollutant Monitoring</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Pollutant</th>
+                                <th>Unit</th>
+                                <th>WHO Guideline</th>
+                                <th>Swiss Limit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>NO₂ (Nitrogen Dioxide)</td>
+                                <td>µg/m³</td>
+                                <td>25 (annual)</td>
+                                <td>30 (annual)</td>
+                            </tr>
+                            <tr>
+                                <td>PM₁₀ (Particulate Matter)</td>
+                                <td>µg/m³</td>
+                                <td>15 (annual)</td>
+                                <td>20 (annual)</td>
+                            </tr>
+                            <tr>
+                                <td>PM₂.₅ (Fine Particles)</td>
+                                <td>µg/m³</td>
+                                <td>5 (annual)</td>
+                                <td>10 (annual)</td>
+                            </tr>
+                            <tr>
+                                <td>O₃ (Ozone)</td>
+                                <td>µg/m³</td>
+                                <td>100 (8-hour)</td>
+                                <td>120 (hourly)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Station Selection Algorithm</h4>
+                    <div class="formula">
+                        Distance = √[(lat₂ - lat₁)² + (lon₂ - lon₁)²] × 111.32 km<br>
+                        Selected Station = min(Distance) where Distance ≤ 50 km
+                    </div>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>Weather Data Integration</h3>
+                    <p>MeteoSwiss weather station data for building-specific climate conditions.</p>
+                    
+                    <h4>Measured Parameters</h4>
+                    <ul style="margin: 1rem 0; padding-left: 2rem;">
+                        <li><strong>Temperature:</strong> °C (ambient air temperature)</li>
+                        <li><strong>Humidity:</strong> % (relative humidity)</li>
+                        <li><strong>Pressure:</strong> hPa (atmospheric pressure)</li>
+                        <li><strong>Wind Speed:</strong> m/s</li>
+                        <li><strong>Wind Direction:</strong> degrees from north</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Energy Section -->
+            <section id="energy" class="section">
+                <h2><span class="icon"></span>Energy Analysis Algorithms</h2>
+                
+                <div class="algorithm-card">
+                    <h3>NILM-Based Energy Disaggregation</h3>
+                    <p><strong>Service:</strong> <code>EnergyService</code></p>
+                    <p>Non-Intrusive Load Monitoring (NILM) simulation for appliance-level energy consumption analysis.</p>
+                    
+                    <h4>Appliance Categories</h4>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Typical Range (kWh/year)</th>
+                                <th>Detection Method</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Lighting</td>
+                                <td>100-600</td>
+                                <td>Switch pattern analysis</td>
+                            </tr>
+                            <tr>
+                                <td>HVAC</td>
+                                <td>200-1000</td>
+                                <td>Seasonal load correlation</td>
+                            </tr>
+                            <tr>
+                                <td>Appliances</td>
+                                <td>150-550</td>
+                                <td>Signature pattern matching</td>
+                            </tr>
+                            <tr>
+                                <td>Heating</td>
+                                <td>100-700</td>
+                                <td>Temperature correlation</td>
+                            </tr>
+                            <tr>
+                                <td>Cooling</td>
+                                <td>50-350</td>
+                                <td>Weather correlation</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="reference">
+                        <strong>Reference:</strong> Based on Swiss Federal Office of Energy (SFOE) residential energy consumption statistics and NILM research from ETH Zurich.
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Sources Section -->
+            <section id="data-sources" class="section">
+                <h2><span class="icon"></span>Authoritative Data Sources</h2>
+                
+                <div class="data-source">
+                    <h3>NASA POWER (Primary Solar Data Source)</h3>
+                    <p><strong>Purpose:</strong> Precise location-based solar irradiance measurements</p>
+                    <p><strong>API Endpoint:</strong> <code>https://power.larc.nasa.gov/api/temporal/monthly/point</code></p>
+                    <p><strong>Parameters:</strong> ALLSKY_SFC_SW_DWN (All Sky Surface Shortwave Downward Irradiance)</p>
+                    <p><strong>Resolution:</strong> 0.5° × 0.625° global grid, monthly averages</p>
+                    <p><strong>Time Period:</strong> 2020-2023 (4-year average for reliability)</p>
+                    <p><strong>Accuracy:</strong> Validated against ground-based pyranometer measurements</p>
+                    <p><strong>Swiss Coverage:</strong> Complete coverage with 900-1400 kWh/m²/year measured values</p>
+                    <p><strong>Documentation:</strong> <a href="https://power.larc.nasa.gov/docs/" target="_blank">NASA POWER Documentation</a></p>
+                </div>
+
+                <div class="data-source">
+                    <h3>Swiss Federal Building Register (GWR)</h3>
+                    <p><strong>Purpose:</strong> Official building data for Switzerland</p>
+                    <p><strong>API Endpoint:</strong> <code>https://api3.geo.admin.ch/rest/services/api/MapServer</code></p>
+                    <p><strong>Layer:</strong> <code>ch.bfs.gebaeude_wohnungs_register</code></p>
+                    <p><strong>Data Coverage:</strong> All buildings in Switzerland with EGID</p>
+                    <p><strong>Update Frequency:</strong> Continuous updates from cantonal authorities</p>
+                    <p><strong>Documentation:</strong> <a href="https://www.bfs.admin.ch/bfs/en/home/registers/building-dwelling-register.html" target="_blank">BFS Building Register</a></p>
+                </div>
+
+                <div class="data-source">
+                    <h3>PVGIS (Photovoltaic Geographical Information System)</h3>
+                    <p><strong>Purpose:</strong> European solar potential calculations</p>
+                    <p><strong>API Endpoint:</strong> <code>https://re.jrc.ec.europa.eu/api/PVcalc</code></p>
+                    <p><strong>Database:</strong> SARAH-2 satellite data (EU Copernicus)</p>
+                    <p><strong>Resolution:</strong> 0.05° × 0.05° European grid</p>
+                    <p><strong>Methodology:</strong> Validated against ground measurements</p>
+                    <p><strong>Documentation:</strong> <a href="https://re.jrc.ec.europa.eu/pvg_tools/en/" target="_blank">PVGIS Documentation</a></p>
+                </div>
+
+                <div class="data-source">
+                    <h3>Swiss Solar Atlas (Sonnendach)</h3>
+                    <p><strong>Purpose:</strong> Official Swiss roof-level solar potential</p>
+                    <p><strong>API Endpoint:</strong> <code>https://api3.geo.admin.ch</code></p>
+                    <p><strong>Layer:</strong> <code>ch.bfe.solarenergie-eignung-daecher</code></p>
+                    <p><strong>Resolution:</strong> Building-level precision for entire Switzerland</p>
+                    <p><strong>Authority:</strong> Swiss Federal Office of Energy (SFOE)</p>
+                    <p><strong>Documentation:</strong> <a href="https://www.uvek-gis.admin.ch/BFE/sonnendach/" target="_blank">Sonnendach Portal</a></p>
+                </div>
+
+                <div class="data-source">
+                    <h3>NABEL Air Quality Network</h3>
+                    <p><strong>Purpose:</strong> Swiss air pollution monitoring</p>
+                    <p><strong>API Endpoint:</strong> <code>https://www.bafu.admin.ch/bafu/en/home/topics/air/state/data.html</code></p>
+                    <p><strong>Network:</strong> 16 automated stations across Switzerland</p>
+                    <p><strong>Parameters:</strong> NO₂, PM₁₀, PM₂.₅, O₃, SO₂</p>
+                    <p><strong>Update Frequency:</strong> Hourly measurements</p>
+                    <p><strong>Documentation:</strong> <a href="https://www.bafu.admin.ch/bafu/en/home/topics/air/state/data/national-air-pollution-monitoring-network--nabel-.html" target="_blank">NABEL Documentation</a></p>
+                </div>
+
+                <div class="data-source">
+                    <h3>MeteoSwiss Weather Network</h3>
+                    <p><strong>Purpose:</strong> Official Swiss meteorological data</p>
+                    <p><strong>API Endpoint:</strong> <code>https://data.geo.admin.ch/ch.meteoschweiz.messwerte-aktuell/</code></p>
+                    <p><strong>Network:</strong> 200+ automated weather stations</p>
+                    <p><strong>Parameters:</strong> Temperature, humidity, pressure, wind, precipitation</p>
+                    <p><strong>Update Frequency:</strong> 10-minute intervals</p>
+                    <p><strong>Documentation:</strong> <a href="https://www.meteoswiss.admin.ch/home/measurement-and-forecasting-systems/land-based-stations.html" target="_blank">MeteoSwiss Documentation</a></p>
+                </div>
+            </section>
+
+            <!-- Parameters Section -->
+            <section id="parameters" class="section">
+                <h2><span class="icon"></span>Algorithm Parameters & Assumptions</h2>
+                
+                <div class="algorithm-card">
+                    <h3>Solar Calculation Parameters</h3>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Source/Standard</th>
+                                <th>Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Panel Efficiency</td>
+                                <td>22%</td>
+                                <td>Swissolar 2024 Market Survey</td>
+                                <td>Modern high-efficiency panels available in Swiss market</td>
+                            </tr>
+                            <tr>
+                                <td>System Performance Ratio</td>
+                                <td>0.85</td>
+                                <td>IEA PVPS Task 13</td>
+                                <td>Accounts for inverter losses, shading, soiling</td>
+                            </tr>
+                            <tr>
+                                <td>Roof Orientation Factor</td>
+                                <td>0.9</td>
+                                <td>Swiss Building Standard SIA 380/1</td>
+                                <td>Average Swiss roof orientation efficiency</td>
+                            </tr>
+                            <tr>
+                                <td>System Degradation</td>
+                                <td>0.5%/year</td>
+                                <td>NREL PV Degradation Rates</td>
+                                <td>Long-term performance decline</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>Economic Model Parameters</h3>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Source</th>
+                                <th>Update Frequency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Electricity Price</td>
+                                <td>0.28 CHF/kWh</td>
+                                <td>ElCom Swiss Electricity Commission</td>
+                                <td>Annual</td>
+                            </tr>
+                            <tr>
+                                <td>Feed-in Tariff</td>
+                                <td>0.12 CHF/kWh</td>
+                                <td>VSE/Swissolar Industry Average</td>
+                                <td>Quarterly</td>
+                            </tr>
+                            <tr>
+                                <td>Discount Rate</td>
+                                <td>3%</td>
+                                <td>Swiss National Bank Reference</td>
+                                <td>Semi-annual</td>
+                            </tr>
+                            <tr>
+                                <td>System Lifetime</td>
+                                <td>25 years</td>
+                                <td>IEA PVPS Standard Assumption</td>
+                                <td>Static</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="algorithm-card">
+                    <h3>Building Analysis Parameters</h3>
+                    <table class="parameter-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Value</th>
+                                <th>Standard</th>
+                                <th>Application</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Floor Height</td>
+                                <td>3.0 m</td>
+                                <td>Swiss Building Code SIA 416</td>
+                                <td>Volume calculations</td>
+                            </tr>
+                            <tr>
+                                <td>Roof Pitch Factor</td>
+                                <td>1.15</td>
+                                <td>Swiss Construction Standard</td>
+                                <td>Pitched roof area correction</td>
+                            </tr>
+                            <tr>
+                                <td>Edge Buffer</td>
+                                <td>1.5 m</td>
+                                <td>Swissolar Installation Guidelines</td>
+                                <td>Safety margins around roof edges</td>
+                            </tr>
+                            <tr>
+                                <td>Shading Factor</td>
+                                <td>0.95</td>
+                                <td>Swiss Alpine Solar Study (EPFL)</td>
+                                <td>Regional shading from terrain/buildings</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="reference">
+                    <h4>Industry Standards & References</h4>
+                    <ul style="margin: 1rem 0; padding-left: 2rem;">
+                        <li><strong>Swissolar:</strong> Swiss Solar Industry Association standards and best practices</li>
+                        <li><strong>SIA (Swiss Society of Engineers and Architects):</strong> Building codes and construction standards</li>
+                        <li><strong>IEA PVPS:</strong> International Energy Agency Photovoltaic Power Systems Programme</li>
+                        <li><strong>NREL:</strong> National Renewable Energy Laboratory (USA) research and methodologies</li>
+                        <li><strong>EPFL:</strong> École Polytechnique Fédérale de Lausanne solar research</li>
+                        <li><strong>ETH Zurich:</strong> Energy research and NILM methodologies</li>
+                    </ul>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Capgemini. Swiss Buildings Explorer - Algorithm Documentation</p>
+            <p>Generated on October 16, 2025 | Version 1.0</p>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Highlight current section in navigation
+        window.addEventListener('scroll', () => {
+            let current = '';
+            document.querySelectorAll('section').forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 60) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.nav-item').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

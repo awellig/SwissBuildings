@@ -38,7 +38,8 @@ export class EnhancedSwissSolarEstimationService {
       const solarCalculation = this.calculateOptimizedSolarPotential(
         irradianceData,
         pvgisData,
-        roofAnalysis
+        roofAnalysis,
+        coordinates
       );
       
       // 5. Economic and environmental assessment
@@ -70,7 +71,7 @@ export class EnhancedSwissSolarEstimationService {
     } catch (error) {
       console.error('❌ Enhanced estimation failed, using Swiss solar atlas data:', error);
       // Use Swiss solar atlas instead of poor fallback
-      return this.industryStandardEstimation(coordinates, buildingData);
+      return await this.industryStandardEstimation(coordinates, buildingData);
     }
   }
   
@@ -83,7 +84,12 @@ export class EnhancedSwissSolarEstimationService {
     monthlyProfile: number[];
     dataQuality: string;
   }> {
-    const [lon, lat] = coordinates;
+    // Convert LV95 coordinates to WGS84 for NASA API
+    const wgs84 = this.lv95ToWgs84(coordinates[0], coordinates[1]);
+    const lon = wgs84.lng;
+    const lat = wgs84.lat;
+    
+    console.log(`🗺️ Coordinate conversion: LV95 [${coordinates[0]}, ${coordinates[1]}] → WGS84 [${lat.toFixed(6)}, ${lon.toFixed(6)}]`);
     
     // NASA POWER API for solar irradiance (4-year average for reliability)
     const nasaUrl = `https://power.larc.nasa.gov/api/temporal/monthly/point` +
@@ -140,7 +146,10 @@ export class EnhancedSwissSolarEstimationService {
     systemLosses: number;
     elevation: number;
   }> {
-    const [lon, lat] = coordinates;
+    // Convert LV95 coordinates to WGS84 for PVGIS API
+    const wgs84 = this.lv95ToWgs84(coordinates[0], coordinates[1]);
+    const lon = wgs84.lng;
+    const lat = wgs84.lat;
     
     // PVGIS API for 1kWp system calculation
     const pvgisUrl = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc` +
@@ -279,7 +288,8 @@ export class EnhancedSwissSolarEstimationService {
   private calculateOptimizedSolarPotential(
     irradianceData: any,
     pvgisData: any,
-    roofAnalysis: any
+    roofAnalysis: any,
+    coordinates: [number, number]
   ): {
     roofArea: number;
     suitableArea: number;
@@ -368,10 +378,10 @@ export class EnhancedSwissSolarEstimationService {
    * Industry standard building-based estimation using building characteristics
    * Primary calculation method for Swiss buildings
    */
-  private industryStandardEstimation(
+  private async industryStandardEstimation(
     coordinates: [number, number],
     buildingData: any
-  ): SolarPotential {
+  ): Promise<SolarPotential> {
     console.log('🏠 Using industry standard building-based calculation');
     console.log('📊 Building Input Data:', buildingData);
     
@@ -409,9 +419,10 @@ export class EnhancedSwissSolarEstimationService {
     const panelEfficiency = 0.22; // 220W per m² (high-efficiency panels)
     const potentialKwp = suitableArea * panelEfficiency;
     
-    // Switzerland has excellent solar irradiation - use location-specific values
-    const swissIrradiation = this.getSwissIrradiationByLocation(coordinates);
-    const annualProduction = potentialKwp * swissIrradiation;
+    // Get actual NASA satellite data for irradiation
+    const irradianceData = await this.getNASAIrradianceData(coordinates);
+    const actualIrradiation = irradianceData.annualIrradiation;
+    const annualProduction = potentialKwp * actualIrradiation;
     
     // Calculate proper economics for Switzerland
     const economics = this.calculateEconomics({ potentialKwp, annualProduction }, coordinates);
@@ -423,7 +434,7 @@ export class EnhancedSwissSolarEstimationService {
     • Roof Area: ${roofArea.toFixed(0)}m² (${(roofMultiplier*100).toFixed(0)}% of ground floor)
     • Suitable Area: ${suitableArea.toFixed(0)}m² (${(suitabilityFactor*100).toFixed(0)}% of roof)
     • Panel Efficiency: ${panelEfficiency*1000}W/m² → Potential: ${potentialKwp.toFixed(1)}kWp`);
-    console.log(`🌞 Swiss irradiation: ${swissIrradiation} kWh/m²/year for coordinates [${coordinates[0].toFixed(4)}, ${coordinates[1].toFixed(4)}]`);
+    console.log(`🌞 NASA satellite irradiation: ${actualIrradiation} kWh/m²/year for coordinates [${coordinates[0].toFixed(4)}, ${coordinates[1].toFixed(4)}]`);
     
     return {
       roofArea: Math.round(roofArea),
@@ -432,13 +443,13 @@ export class EnhancedSwissSolarEstimationService {
       annualProduction: Math.round(annualProduction),
       co2Savings: Math.round(annualProduction * 0.105),
       economicViability: economics.economicViability,
-      irradiation: swissIrradiation,
+      irradiation: actualIrradiation,
       suitabilityClass: this.getSwissSuitabilityClass(roofArea, coordinates),
       installationCost: economics.installationCost,
       paybackPeriod: economics.paybackPeriod,
       isEstimated: true,
-      estimationMethod: 'Swiss Building Register + Solar Atlas',
-      dataSource: 'Building data from Swiss Federal Register, irradiation from Swiss Solar Atlas'
+      estimationMethod: 'Swiss Building Register + NASA POWER',
+      dataSource: 'Building data from Swiss Federal Register, irradiation from NASA POWER satellite'
     };
   }
 
@@ -529,5 +540,26 @@ export class EnhancedSwissSolarEstimationService {
     else if (suitabilityScore >= 70) return 'Good';      // Solid investment
     else if (suitabilityScore >= 60) return 'Moderate';  // Acceptable
     else return 'Fair';                                  // Minimal but viable
+  }
+
+  /**
+   * Convert Swiss LV95 coordinates to WGS84 (latitude/longitude)
+   * Required for NASA POWER and other international APIs
+   */
+  private lv95ToWgs84(x: number, y: number): { lat: number; lng: number } {
+    // Swiss coordinate transformation (approximate reverse)
+    const phi0 = 46.95240555555556 * Math.PI / 180; // Bern latitude
+    const lambda0 = 7.439583333333333 * Math.PI / 180; // Bern longitude
+    
+    const R = 6378137; // Earth radius in meters
+    const k0 = 1.0; // Scale factor
+    
+    const phi = ((y - 1200000) / (R * k0)) + phi0;
+    const lambda = ((x - 2600000) / (R * k0 * Math.cos(phi0))) + lambda0;
+    
+    return {
+      lat: phi * 180 / Math.PI,
+      lng: lambda * 180 / Math.PI
+    };
   }
 }

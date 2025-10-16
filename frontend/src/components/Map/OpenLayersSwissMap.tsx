@@ -819,8 +819,8 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
         >
           <HStack spacing={2}>
             <Icon as={IconGripVertical} boxSize={4} color="gray.400" />
-            <Icon as={IconLayersLinked} boxSize={4} color="brand.500" />
-            <Text fontWeight="semibold" fontSize="sm" color="brand.600">
+            <Icon as={IconLayersLinked} boxSize={4} color="black" />
+            <Text fontWeight="semibold" fontSize="sm" color="black">
               Map Layers
             </Text>
           </HStack>
