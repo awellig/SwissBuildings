@@ -5,7 +5,6 @@ import {
   VStack,
   Text,
   Image,
-  Badge,
   Spinner,
   Alert,
   AlertIcon,
@@ -132,7 +131,7 @@ const BuildingExplorer = () => {
         <VStack spacing={4}>
           <Spinner size="xl" color="brand.500" thickness="4px" />
           <Text fontSize="lg" color="gray.600">
-            Loading Swiss Buildings Explorer...
+            Loading Swiss Public Building Intelligence...
           </Text>
         </VStack>
       </Flex>
@@ -179,7 +178,7 @@ const BuildingExplorer = () => {
             />
             <VStack align="start" spacing={0}>
               <Text fontSize="xl" fontWeight="bold" color="brand.600">
-                Swiss Buildings Explorer
+                Swiss Public Building Intelligence
               </Text>
               <Text fontSize="sm" color="gray.600">
                 Powered by{' '}
@@ -205,18 +204,6 @@ const BuildingExplorer = () => {
               _hover={{ bg: "gray.100" }}
               onClick={onInfoOpen}
             />
-            {selectedBuilding && (
-              <Badge 
-                colorScheme="blackAlpha" 
-                fontSize="sm" 
-                px={3} 
-                py={1}
-                bg="black"
-                color="white"
-              >
-                {selectedBuilding.properties.name}
-              </Badge>
-            )}
           </HStack>
         </HStack>
       </Box>
@@ -249,7 +236,7 @@ const BuildingExplorer = () => {
           <ModalHeader>
             <HStack>
               <IconInfoCircle color="var(--chakra-colors-brand-500)" />
-              <Text>Swiss Buildings Explorer - Platform Information</Text>
+              <Text>Swiss Public Building Intelligence - Platform Information</Text>
             </HStack>
           </ModalHeader>
           <ModalCloseButton />
@@ -270,7 +257,7 @@ const BuildingExplorer = () => {
                       Professional Swiss Building Data Visualization Platform
                     </Text>
                     <Text color="gray.700">
-                      The Swiss Buildings Explorer is a comprehensive geospatial application designed to visualize and interact with 
+                      The Swiss Public Building Intelligence platform is a comprehensive geospatial application designed to visualize and interact with 
                       Swiss building data. Built with modern web technologies and professional-grade mapping capabilities, this platform 
                       provides real-time access to building information across Switzerland.
                     </Text>
@@ -428,15 +415,8 @@ const BuildingExplorer = () => {
       >
         <HStack justify="space-between" fontSize="xs" color="gray.600">
           <Text>
-            © 2024 Capgemini - Swiss Buildings Data Visualization
+            © 2025 Capgemini - Swiss Buildings Data Visualization
           </Text>
-          <HStack spacing={4}>
-            <Text>Data Sources:</Text>
-            <Text>opendata.swiss</Text>
-            <Text>NABEL</Text>
-            <Text>MeteoSwiss</Text>
-            <Text>SFOE Sonnendach</Text>
-          </HStack>
         </HStack>
       </Box>
     </Box>

@@ -37,7 +37,7 @@ import TileLayer from 'ol/layer/Tile';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import XYZ from 'ol/source/XYZ';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
 import { GeoJSON } from 'ol/format';
 import { Style, Fill, Stroke } from 'ol/style';
 import { Control } from 'ol/control';
@@ -315,10 +315,34 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
       layersRef.current.set('buildings', buildingsLayer);
 
       // Add click handler for building identification
-      map.on('singleclick', async (event) => {
+        map.on('singleclick', async (event) => {
         try {
           const coordinate = event.coordinate;
           const [x, y] = coordinate;
+          
+          // Debug: Log all coordinate transformations
+          const wgs84Coordinates = toLonLat([x, y]);
+          const [longitude, latitude] = wgs84Coordinates;
+          
+          console.log('🗺️ Map Click Debug:', {
+            originalClick: coordinate,
+            webMercator: [x, y],
+            wgs84Lon: longitude,
+            wgs84Lat: latitude,
+            expectedBern: { lat: 46.9481, lon: 7.4474 }
+          });
+          
+          // Verify coordinates are reasonable for Switzerland
+          if (latitude < 45.8 || latitude > 47.9 || longitude < 5.9 || longitude > 10.6) {
+            console.warn('⚠️ Coordinates outside Switzerland bounds:', { latitude, longitude });
+            toast({
+              title: 'Location Error',
+              description: 'Clicked location appears to be outside Switzerland',
+              status: 'warning',
+              duration: 3000,
+            });
+            return;
+          }
           
           // Get current zoom level for debugging
           const currentZoom = map.getView().getZoom();
@@ -327,9 +351,7 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
           // Get map view properties for API call
           const view = map.getView();
           const mapSize = map.getSize();
-          if (!mapSize) return;
-          
-          const extent = view.calculateExtent(mapSize);
+          if (!mapSize) return;          const extent = view.calculateExtent(mapSize);
           
           // Call Swiss GeoAdmin identify API using Web Mercator coordinates
           const identifyUrl = `https://api3.geo.admin.ch/rest/services/api/MapServer/identify?` +
@@ -444,6 +466,59 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
             // Try to extract EGID from different possible locations
             const egid = attrs.egid || attrs.EGID || featureId || feature.layerBodId || 'Unknown';
             
+            // Convert Web Mercator coordinates to WGS84 for display
+            const wgs84Coordinates = toLonLat([x, y]);
+            let [longitude, latitude] = wgs84Coordinates;
+            
+            console.log('🗺️ Coordinate conversion debug:', {
+              originalClick: [x, y],
+              webMercatorInput: [x, y],
+              wgs84Output: wgs84Coordinates,
+              longitude: longitude,
+              latitude: latitude,
+              expectedBernLng: 7.4474,
+              expectedBernLat: 46.9481,
+              swissLV95: attrs.gkoor_e && attrs.gkoor_n ? [attrs.gkoor_e, attrs.gkoor_n] : 'Not available'
+            });
+            
+            // If coordinates are clearly wrong (outside world bounds), try Swiss LV95 conversion
+            if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+              console.warn('🚨 toLonLat produced invalid coordinates, trying Swiss LV95 fallback');
+              
+              if (attrs.gkoor_e && attrs.gkoor_n) {
+                // Use a more robust Swiss coordinate conversion
+                // This uses the official CH1903+ to WGS84 transformation parameters
+                const east = attrs.gkoor_e;
+                const north = attrs.gkoor_n;
+                
+                // Convert LV95 to WGS84 (simplified transformation)
+                longitude = 2.6779094 + ((east - 2600000) / 1000000) * 4.728982 
+                          + ((north - 1200000) / 1000000) * 0.791484;
+                latitude = 46.9524055 + ((north - 1200000) / 1000000) * 0.804816 
+                         - ((east - 2600000) / 1000000) * 0.044527;
+                
+                console.log('🇨🇭 Using Swiss LV95 conversion:', {
+                  lv95: [east, north],
+                  convertedWgs84: [longitude, latitude]
+                });
+              } else {
+                console.error('❌ No valid coordinates available');
+                toast({
+                  title: 'Coordinate Error',
+                  description: 'Unable to determine building location',
+                  status: 'error',
+                  duration: 3000,
+                });
+                return;
+              }
+            }
+            
+            // Final validation - ensure coordinates are reasonable for Switzerland
+            if (latitude < 45.8 || latitude > 47.9 || longitude < 5.9 || longitude > 10.6) {
+              console.warn('⚠️ Final coordinates still outside Switzerland bounds:', { latitude, longitude });
+              // Don't return here - let it proceed but log the warning
+            }
+            
             // Create enhanced building object with available data
             // Since Swiss building API might have different attribute names, we'll use fallbacks
             const buildingData = {
@@ -465,14 +540,14 @@ export const OpenLayersSwissMap: React.FC<OpenLayersSwissMapProps> = ({
                 zipCode: String(attrs.plz4 || attrs.postcode || attrs.zip || ''),
                 // Store all available attributes for debugging
                 rawAttributes: attrs,
-                // Additional Swiss building register fields with fallbacks
-                coordinates: attrs.gkoor_e && attrs.gkoor_n ? [attrs.gkoor_e, attrs.gkoor_n] : [x, y],
+                // Store Swiss LV95 coordinates for backend services (if available)
+                swissCoordinates: attrs.gkoor_e && attrs.gkoor_n ? [attrs.gkoor_e, attrs.gkoor_n] : null,
                 status: attrs.gstat || attrs.status || 'Active',
                 category: attrs.gkat || attrs.category || 'Building'
               },
-              geometry: feature.geometry || {
+              geometry: {
                 type: 'Point',
-                coordinates: [x, y]
+                coordinates: [longitude, latitude] // Always use converted WGS84 coordinates
               }
             };
 

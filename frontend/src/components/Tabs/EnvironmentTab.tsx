@@ -12,10 +12,13 @@ import {
   CardBody,
   Icon,
   Spinner,
-  Alert,
-  AlertIcon,
   Progress,
   Badge,
+  Box,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { 
   IconWind, 
@@ -29,6 +32,7 @@ import { environmentService } from '../../services/api';
 interface BuildingFeature {
   properties: {
     EGID: string;
+    swissCoordinates?: [number, number] | null;
   };
   geometry: {
     coordinates: [number, number];
@@ -52,7 +56,6 @@ interface EnvironmentData {
     humidity: number;
     pressure: number;
     windSpeed: number;
-    windDirection: number;
   };
 }
 
@@ -61,12 +64,58 @@ export const EnvironmentTab = ({ building }: EnvironmentTabProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Extract coordinates correctly - geometry.coordinates should be [longitude, latitude] in WGS84
   const [lng, lat] = building.geometry.coordinates;
+
+  // Debug coordinates being used
+  console.log('🌍 EnvironmentTab coordinates debug:', {
+    rawCoordinates: building.geometry.coordinates,
+    extractedLng: lng,
+    extractedLat: lat,
+    expectedBernLng: 7.4474,
+    expectedBernLat: 46.9481,
+    swissCoordinates: building.properties.swissCoordinates
+  });
+
+  // Validate that coordinates are in expected WGS84 range for Switzerland
+  const isValidWGS84 = (lat >= 45.8 && lat <= 47.9 && lng >= 5.9 && lng <= 10.6);
+  
+  if (!isValidWGS84) {
+    console.error('❌ Invalid WGS84 coordinates for Switzerland:', { lat, lng });
+  }
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        
+        // Debug: Log the coordinates we're working with
+        console.log(`🌍 EnvironmentTab: Starting fetch with coordinates:`, {
+          lat,
+          lng,
+          rawCoordinates: building.geometry.coordinates,
+          isValidRange: lat >= 45.8 && lat <= 47.9 && lng >= 5.9 && lng <= 10.6,
+          looksLikeWebMercator: Math.abs(lat) > 1000 || Math.abs(lng) > 1000
+        });
+        
+        // Check if coordinates look like Web Mercator (large numbers)
+        if (Math.abs(lat) > 1000 || Math.abs(lng) > 1000) {
+          console.error('❌ Coordinates appear to be Web Mercator, not WGS84:', { lat, lng });
+          setError('Coordinate conversion error - coordinates not in WGS84 format');
+          setLoading(false);
+          return;
+        }
+        
+        // Check if coordinates are in valid WGS84 range for Switzerland
+        if (lat < 45.8 || lat > 47.9 || lng < 5.9 || lng > 10.6) {
+          console.warn(`⚠️ Coordinates outside Switzerland bounds:`, { lat, lng });
+          setError('Location appears to be outside Switzerland');
+          setLoading(false);
+          return;
+        }
+        
+        console.log(`🌍 Making environment API calls with coordinates: lat=${lat}, lng=${lng}`);
+        
         const [airQualityResponse, weatherResponse] = await Promise.all([
           environmentService.getAirQuality(lat, lng),
           environmentService.getWeatherData(lat, lng)
@@ -125,15 +174,56 @@ export const EnvironmentTab = ({ building }: EnvironmentTabProps) => {
 
   if (error || !data) {
     return (
-      <Alert status="error">
-        <AlertIcon />
-        {error || 'Failed to load environment data'}
-      </Alert>
+      <VStack spacing={6} align="stretch">
+        <Card>
+          <CardBody>
+            <VStack spacing={4} align="center" py={8}>
+              <Icon as={IconWind} boxSize={16} color="gray.300" />
+              <VStack spacing={2} textAlign="center">
+                <Text fontSize="lg" fontWeight="semibold" color="gray.600">
+                  Environment Data Unavailable
+                </Text>
+                <Text fontSize="sm" color="gray.500" maxW="md">
+                  {error || 'Unable to load air quality and weather data for this location. This might be due to invalid coordinates or temporary service unavailability.'}
+                </Text>
+              </VStack>
+              <Box
+                bg="green.50"
+                p={4}
+                borderRadius="md"
+                border="1px solid"
+                borderColor="green.200"
+                maxW="md"
+              >
+                <VStack spacing={2} align="start">
+                  <Text fontSize="sm" fontWeight="medium" color="green.800">
+                    🌍 About Swiss Environment Data
+                  </Text>
+                  <Text fontSize="xs" color="green.700">
+                    Environmental data comes from NABEL (National Air Pollution Monitoring Network) and MeteoSwiss stations across Switzerland.
+                  </Text>
+                </VStack>
+              </Box>
+            </VStack>
+          </CardBody>
+        </Card>
+      </VStack>
     );
   }
 
   return (
     <VStack spacing={6} align="stretch">
+      {/* Data Source Alert */}
+      <Alert status="success" borderRadius="md">
+        <AlertIcon />
+        <Box>
+          <AlertTitle>Real Environmental Data</AlertTitle>
+          <AlertDescription fontSize="sm">
+            Air quality data from NABEL (National Air Pollution Monitoring Network) and weather data from MeteoSwiss - Official Swiss environmental monitoring services.
+          </AlertDescription>
+        </Box>
+      </Alert>
+
       {/* Air Quality Section */}
       <Card>
         <CardBody>
@@ -205,7 +295,7 @@ export const EnvironmentTab = ({ building }: EnvironmentTabProps) => {
               Weather Data (MeteoSwiss)
             </Text>
             
-            <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4}>
+            <SimpleGrid columns={{ base: 2, md: 2 }} spacing={4}>
               <Stat>
                 <StatLabel>
                   <HStack>
@@ -247,20 +337,6 @@ export const EnvironmentTab = ({ building }: EnvironmentTabProps) => {
                 </StatLabel>
                 <StatNumber>{data.weather.windSpeed.toFixed(1)}</StatNumber>
                 <StatHelpText>km/h</StatHelpText>
-              </Stat>
-
-              <Stat>
-                <StatLabel>Wind Direction</StatLabel>
-                <StatNumber>{data.weather.windDirection.toFixed(0)}°</StatNumber>
-                <StatHelpText>
-                  {data.weather.windDirection >= 337.5 || data.weather.windDirection < 22.5 ? 'N' :
-                   data.weather.windDirection >= 22.5 && data.weather.windDirection < 67.5 ? 'NE' :
-                   data.weather.windDirection >= 67.5 && data.weather.windDirection < 112.5 ? 'E' :
-                   data.weather.windDirection >= 112.5 && data.weather.windDirection < 157.5 ? 'SE' :
-                   data.weather.windDirection >= 157.5 && data.weather.windDirection < 202.5 ? 'S' :
-                   data.weather.windDirection >= 202.5 && data.weather.windDirection < 247.5 ? 'SW' :
-                   data.weather.windDirection >= 247.5 && data.weather.windDirection < 292.5 ? 'W' : 'NW'}
-                </StatHelpText>
               </Stat>
             </SimpleGrid>
           </VStack>

@@ -12,12 +12,14 @@ import {
   CardBody,
   Icon,
   Spinner,
-  Alert,
-  AlertIcon,
   Badge,
   Box,
   CircularProgress,
   CircularProgressLabel,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { 
   IconSun, 
@@ -27,6 +29,7 @@ import {
   IconHome,
   IconBolt
 } from '@tabler/icons-react';
+import { solarService } from '../../services/api';
 
 interface BuildingFeature {
   properties: {
@@ -46,6 +49,9 @@ interface SolarData {
   co2Savings: number;
   economicViability: 'excellent' | 'good' | 'moderate' | 'poor';
   irradiation: number;
+  isEstimated?: boolean;
+  estimationMethod?: string;
+  dataSource?: string;
 }
 
 export const SolarTab = ({ building }: SolarTabProps) => {
@@ -57,35 +63,17 @@ export const SolarTab = ({ building }: SolarTabProps) => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Simulate API call to SFOE Sonnendach
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        console.log(`🏠 SolarTab: Fetching solar data for building EGID: ${building.properties.EGID}`);
         
-        const roofArea = Math.random() * 500 + 100;
-        const suitablePercentage = Math.random() * 0.4 + 0.4;
-        const suitableArea = roofArea * suitablePercentage;
-        const potentialKwp = suitableArea * 0.15;
-        const irradiation = Math.random() * 300 + 900;
-        const annualProduction = potentialKwp * irradiation;
-        const co2Savings = annualProduction * 0.4;
+        // Call real backend service instead of mock data
+        const solarPotential = await solarService.getSolarPotential(building.properties.EGID);
         
-        let economicViability: 'excellent' | 'good' | 'moderate' | 'poor';
-        if (irradiation > 1100) economicViability = 'excellent';
-        else if (irradiation > 1000) economicViability = 'good';
-        else if (irradiation > 950) economicViability = 'moderate';
-        else economicViability = 'poor';
-
-        setData({
-          roofArea,
-          suitableArea,
-          potentialKwp,
-          annualProduction,
-          co2Savings,
-          economicViability,
-          irradiation
-        });
+        console.log('🌞 SolarTab: Received solar potential data:', solarPotential);
+        
+        setData(solarPotential);
       } catch (err) {
+        console.error('❌ SolarTab: Failed to load solar potential data:', err);
         setError('Failed to load solar potential data');
-        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -123,10 +111,40 @@ export const SolarTab = ({ building }: SolarTabProps) => {
 
   if (error || !data) {
     return (
-      <Alert status="error">
-        <AlertIcon />
-        {error || 'Failed to load solar potential data'}
-      </Alert>
+      <VStack spacing={6} align="stretch">
+        <Card>
+          <CardBody>
+            <VStack spacing={4} align="center" py={8}>
+              <Icon as={IconSun} boxSize={16} color="gray.300" />
+              <VStack spacing={2} textAlign="center">
+                <Text fontSize="lg" fontWeight="semibold" color="gray.600">
+                  Solar Data Unavailable
+                </Text>
+                <Text fontSize="sm" color="gray.500" maxW="md">
+                  {error || 'No solar potential data is available for this building. This could be because the building is not in the SFOE Sonnendach database or the building coordinates could not be determined.'}
+                </Text>
+              </VStack>
+              <Box
+                bg="blue.50"
+                p={4}
+                borderRadius="md"
+                border="1px solid"
+                borderColor="blue.200"
+                maxW="md"
+              >
+                <VStack spacing={2} align="start">
+                  <Text fontSize="sm" fontWeight="medium" color="blue.800">
+                    💡 About Swiss Solar Data
+                  </Text>
+                  <Text fontSize="xs" color="blue.700">
+                    Solar potential data comes from the Swiss Federal Office of Energy (SFOE) Sonnendach project, which maps solar suitability for buildings across Switzerland.
+                  </Text>
+                </VStack>
+              </Box>
+            </VStack>
+          </CardBody>
+        </Card>
+      </VStack>
     );
   }
 
@@ -136,6 +154,36 @@ export const SolarTab = ({ building }: SolarTabProps) => {
 
   return (
     <VStack spacing={6} align="stretch">
+      {/* Data Source Alert */}
+      {data.isEstimated && (
+        <Alert status="info" borderRadius="md">
+          <AlertIcon />
+          <Box>
+            <AlertTitle>Estimated Solar Data</AlertTitle>
+            <AlertDescription fontSize="sm">
+              {data.dataSource || 'Data estimated from building characteristics and Swiss solar irradiation models.'}
+              {data.estimationMethod && (
+                <Text fontSize="xs" mt={1} color="gray.600">
+                  Method: {data.estimationMethod}
+                </Text>
+              )}
+            </AlertDescription>
+          </Box>
+        </Alert>
+      )}
+      
+      {!data.isEstimated && (
+        <Alert status="success" borderRadius="md">
+          <AlertIcon />
+          <Box>
+            <AlertTitle>Official Solar Data</AlertTitle>
+            <AlertDescription fontSize="sm">
+              Data from SFOE Sonnendach (Swiss Federal Office of Energy) - Official solar cadastre.
+            </AlertDescription>
+          </Box>
+        </Alert>
+      )}
+
       {/* Solar Potential Overview */}
       <Card>
         <CardBody>

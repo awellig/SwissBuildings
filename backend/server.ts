@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+// Import route modules
+import buildingRoutes from './routes/buildingRoutes';
+import environmentRoutes from './routes/environmentRoutes';
+import energyRoutes from './routes/energyRoutes';
+import solarRoutes from './routes/solarRoutes';
+
 // Load environment variables
 dotenv.config();
 
@@ -9,178 +15,62 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 
-// Sample building data
-const SAMPLE_BUILDINGS = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: {
-        EGID: '123456789',
-        GKODE: 2685000,
-        GKODN: 1249000,
-        GEXPDAT: '2023-01-01',
-        name: 'Capgemini Office Building',
-        address: 'Baarerstrasse 10, 6300 Zug',
-        buildingType: 'Office',
-        constructionYear: 2018,
-        floors: 8,
-        area: 2500
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [8.5151, 47.1712] // Zug coordinates
-      }
-    },
-    {
-      type: 'Feature',
-      properties: {
-        EGID: '987654321',
-        GKODE: 2683000,
-        GKODN: 1247000,
-        GEXPDAT: '2023-01-01',
-        name: 'Swiss Parliament Building',
-        address: 'Bundesplatz 3, 3003 Bern',
-        buildingType: 'Government',
-        constructionYear: 1902,
-        floors: 4,
-        area: 15000
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [7.4445, 46.9466] // Bern coordinates
-      }
-    },
-    {
-      type: 'Feature',
-      properties: {
-        EGID: '456789123',
-        GKODE: 2679000,
-        GKODN: 1245000,
-        GEXPDAT: '2023-01-01',
-        name: 'ETH Zurich Main Building',
-        address: 'Rämistrasse 101, 8092 Zürich',
-        buildingType: 'Educational',
-        constructionYear: 1864,
-        floors: 5,
-        area: 25000
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [8.5478, 47.3769] // Zurich coordinates
-      }
-    }
-  ]
-};
-
-// Building routes
-app.get('/api/buildings', (req, res) => {
-  res.json(SAMPLE_BUILDINGS);
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
 });
 
-app.get('/api/buildings/:egid', (req, res) => {
-  const { egid } = req.params;
-  const building = SAMPLE_BUILDINGS.features.find(
-    (b: any) => b.properties.EGID === egid
-  );
-  
-  if (building) {
-    res.json(building);
-  } else {
-    res.status(404).json({ error: 'Building not found' });
-  }
-});
+// API Routes
+app.use('/api/buildings', buildingRoutes);
+app.use('/api/environment', environmentRoutes);
+app.use('/api/energy', energyRoutes);
+app.use('/api/solar', solarRoutes);
 
-// Environment routes
-app.get('/api/environment/air-quality/:location', (req, res) => {
+// Health check endpoint
+app.get('/api/health', (req, res) => {
   res.json({
-    NO2: Math.random() * 50 + 10,
-    PM10: Math.random() * 30 + 5,
-    PM25: Math.random() * 20 + 3,
-    O3: Math.random() * 100 + 20,
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    status: 'good'
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0'
   });
 });
 
-app.get('/api/environment/weather/:location', (req, res) => {
-  res.json({
-    temperature: Math.random() * 25 + 5,
-    humidity: Math.random() * 40 + 40,
-    pressure: Math.random() * 50 + 950,
-    windSpeed: Math.random() * 15 + 2,
-    windDirection: Math.random() * 360,
-    timestamp: new Date().toISOString()
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
 });
 
-// Energy routes
-app.get('/api/energy/consumption/:egid', (req, res) => {
-  const baseConsumption = Math.random() * 2000 + 500;
-  res.json({
-    totalKwh: baseConsumption,
-    dailyAverage: baseConsumption / 30,
-    monthlyTrend: Array.from({ length: 12 }, () => Math.random() * 300 + 100),
-    lastUpdated: new Date().toISOString()
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    path: req.originalUrl
   });
-});
-
-app.get('/api/energy/breakdown/:egid', (req, res) => {
-  const lighting = Math.random() * 500 + 100;
-  const hvac = Math.random() * 800 + 200;
-  const appliances = Math.random() * 400 + 150;
-  const heating = Math.random() * 600 + 100;
-  const cooling = Math.random() * 300 + 50;
-  const other = Math.random() * 200 + 50;
-  
-  res.json({
-    lighting,
-    hvac,
-    appliances,
-    heating,
-    cooling,
-    other,
-    total: lighting + hvac + appliances + heating + cooling + other
-  });
-});
-
-// Solar routes
-app.get('/api/solar/potential/:egid', (req, res) => {
-  const roofArea = Math.random() * 500 + 100;
-  const suitablePercentage = Math.random() * 0.4 + 0.4;
-  const suitableArea = roofArea * suitablePercentage;
-  const potentialKwp = suitableArea * 0.15;
-  const irradiation = Math.random() * 300 + 900;
-  const annualProduction = potentialKwp * irradiation;
-  const co2Savings = annualProduction * 0.4;
-  
-  let economicViability: string;
-  if (irradiation > 1100) economicViability = 'excellent';
-  else if (irradiation > 1000) economicViability = 'good';
-  else if (irradiation > 950) economicViability = 'moderate';
-  else economicViability = 'poor';
-
-  res.json({
-    roofArea,
-    suitableArea,
-    potentialKwp,
-    annualProduction,
-    co2Savings,
-    economicViability,
-    irradiation
-  });
-});
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Swiss Buildings API is running' });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`🏢 Buildings API: http://localhost:${PORT}/api/buildings`);
+  console.log(`🚀 Swiss Buildings Explorer Backend`);
+  console.log(`📡 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  console.log(`💚 Health check: http://localhost:${PORT}/api/health`);
+  console.log('');
+  console.log('🇨🇭 Swiss Open Data Integration:');
+  console.log('  ✅ NABEL Air Quality Monitoring');
+  console.log('  ✅ MeteoSwiss Weather Data'); 
+  console.log('  ✅ SFOE Sonnendach Solar Potential');
+  console.log('  ✅ Federal Building Registry');
+  console.log('');
 });

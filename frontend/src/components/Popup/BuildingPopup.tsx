@@ -24,7 +24,7 @@ import {
   IconHome, 
   IconBolt, 
   IconSun,
-  IconGripVertical,
+  IconGripHorizontal,
 } from '@tabler/icons-react';
 import { GeneralInfoTab } from '../Tabs/GeneralInfoTab';
 import { EnvironmentTab } from '../Tabs/EnvironmentTab';
@@ -64,6 +64,7 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   // Handle modal dragging
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
     setDragStart({
       x: e.clientX - position.x,
@@ -74,13 +75,24 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging) return;
     
+    e.preventDefault();
+    
+    // Calculate new position with bounds checking
+    const newX = e.clientX - dragStart.x;
+    const newY = e.clientY - dragStart.y;
+    
+    // Prevent dragging outside viewport
+    const maxX = window.innerWidth - 100; // Leave some margin
+    const maxY = window.innerHeight - 100;
+    
     setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+      x: Math.max(-100, Math.min(maxX, newX)),
+      y: Math.max(0, Math.min(maxY, newY)),
     });
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: MouseEvent) => {
+    e.preventDefault();
     setIsDragging(false);
   };
 
@@ -89,13 +101,23 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none'; // Prevent text selection while dragging
       
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.userSelect = '';
       };
     }
-  }, [isDragging, dragStart]);
+  }, [isDragging, dragStart.x, dragStart.y]);
+
+  // Reset position when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPosition({ x: 0, y: 0 });
+      setIsDragging(false);
+    }
+  }, [isOpen]);
 
   // Early return after all hooks have been called
   if (!building) {
@@ -122,41 +144,58 @@ export const BuildingPopup = ({ building, isOpen, onClose }: BuildingPopupProps)
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="4xl" scrollBehavior="inside" closeOnOverlayClick={!isDragging}>
       <ModalOverlay />
       <ModalContent 
         maxH="90vh"
         transform={`translate(${position.x}px, ${position.y}px)`}
         cursor={isDragging ? 'grabbing' : 'default'}
+        position="relative"
+        boxShadow="2xl"
+        transition={isDragging ? 'none' : 'transform 0.2s ease'}
       >
-        <ModalHeader pb={3}>
-          <HStack spacing={3} align="start">
-            <Box
-              cursor="grab"
-              _active={{ cursor: 'grabbing' }}
-              onMouseDown={handleMouseDown}
-              p={2}
-              mr={2}
-            >
-              <Icon as={IconGripVertical} color="gray.400" boxSize={5} />
-            </Box>
-            <VStack align="start" spacing={2} flex={1}>
-              <HStack>
-                <Icon as={IconBuilding} color="brand.500" boxSize={6} />
-                <Text fontSize="xl" fontWeight="bold" color="brand.600">
-                  {properties.name}
-                </Text>
-                <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
-                  {String(properties.buildingType || 'Unknown')}
-                </Badge>
-              </HStack>
-              <Text fontSize="sm" color="gray.600">
-                {properties.address} • EGID: {properties.EGID}
+        {/* Improved Drag Handle */}
+        <Box
+          position="absolute"
+          top={2}
+          left="50%"
+          transform="translateX(-50%)"
+          zIndex={1000}
+          cursor="grab"
+          _active={{ cursor: 'grabbing' }}
+          _hover={{ bg: 'gray.100', boxShadow: 'md' }}
+          onMouseDown={handleMouseDown}
+          px={3}
+          py={1}
+          borderRadius="full"
+          bg="white"
+          boxShadow="sm"
+          border="2px solid"
+          borderColor="gray.300"
+          transition="all 0.2s"
+        >
+          <Icon as={IconGripHorizontal} color="gray.500" boxSize={5} />
+        </Box>
+        
+        <ModalHeader pb={3} pt={8}>
+          <VStack align="start" spacing={2} flex={1}>
+            <HStack>
+              <Icon as={IconBuilding} color="brand.500" boxSize={6} />
+              <Text fontSize="xl" fontWeight="bold" color="brand.600">
+                {properties.name}
               </Text>
-            </VStack>
-          </HStack>
+              <Badge colorScheme={getBuildingTypeBadgeColor(properties.buildingType)}>
+                {String(properties.buildingType || 'Unknown')}
+              </Badge>
+            </HStack>
+            <Text fontSize="sm" color="gray.600">
+              {properties.address && properties.address !== 'Address lookup in progress...' 
+                ? properties.address 
+                : 'Address not available'} • EGID: {properties.EGID}
+            </Text>
+          </VStack>
         </ModalHeader>
-        <ModalCloseButton top={4} right={4} />
+        <ModalCloseButton top={6} right={4} />
         
         <ModalBody px={0}>
           <Tabs variant="enclosed" colorScheme="brand">

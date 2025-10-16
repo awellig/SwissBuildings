@@ -127,6 +127,15 @@ export const IndoorTab = ({ building }: IndoorTabProps) => {
 
   return (
     <VStack spacing={6} align="stretch">
+      {/* Mockup Data Alert */}
+      <Alert status="warning" variant="subtle">
+        <AlertIcon />
+        <Text fontSize="sm">
+          <strong>Mockup Data:</strong> This indoor environmental data is simulated for demonstration purposes. 
+          Real data would come from IoT sensors and building management systems.
+        </Text>
+      </Alert>
+
       <Card>
         <CardBody>
           <VStack spacing={4} align="stretch">

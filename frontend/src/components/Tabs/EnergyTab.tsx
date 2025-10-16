@@ -132,6 +132,15 @@ export const EnergyTab = ({ building }: EnergyTabProps) => {
 
   return (
     <VStack spacing={6} align="stretch">
+      {/* Data Source Alert */}
+      <Alert status="info" variant="subtle">
+        <AlertIcon />
+        <Text fontSize="sm">
+          <strong>Demo Data:</strong> This energy consumption data is simulated for demonstration purposes. 
+          Real energy data would come from smart meter readings or building management systems.
+        </Text>
+      </Alert>
+
       {/* Overall Consumption */}
       <Card>
         <CardBody>
