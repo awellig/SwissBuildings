@@ -133,7 +133,7 @@ const BuildingExplorer = () => {
         <VStack spacing={4}>
           <Spinner size="xl" color="brand.500" thickness="4px" />
           <Text fontSize="lg" color="gray.600">
-            Loading Swiss Public Building Intelligence...
+            Loading SwissBuild Nexus...
           </Text>
         </VStack>
       </Flex>
@@ -180,7 +180,7 @@ const BuildingExplorer = () => {
             />
             <VStack align="start" spacing={0}>
               <Text fontSize="lg" fontWeight="bold" color="black">
-                Swiss Public Building Intelligence
+                SwissBuild Nexus
               </Text>
               <Text fontSize="xs" color="gray.600">
                 Powered by{' '}
@@ -238,7 +238,7 @@ const BuildingExplorer = () => {
           <ModalHeader>
             <HStack>
               <IconInfoCircle color="var(--chakra-colors-brand-500)" />
-              <Text>Swiss Public Building Intelligence - Platform Information</Text>
+              <Text>SwissBuild Nexus - Platform Information</Text>
             </HStack>
           </ModalHeader>
           <ModalCloseButton />
@@ -259,7 +259,7 @@ const BuildingExplorer = () => {
                       Professional Swiss Building Data Visualization Platform
                     </Text>
                     <Text color="gray.700">
-                      The Swiss Public Building Intelligence platform is a comprehensive geospatial application designed to visualize and interact with 
+                      The SwissBuild Nexus platform is a comprehensive geospatial application designed to visualize and interact with 
                       Swiss building data. Built with modern web technologies and professional-grade mapping capabilities, this platform 
                       provides real-time access to building information across Switzerland.
                     </Text>
